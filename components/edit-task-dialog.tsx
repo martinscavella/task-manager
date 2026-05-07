@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { updateTask } from '@/lib/actions'
-import type { Task, TaskPriority, TaskStatus } from '@/lib/types'
+import { STATUS_CONFIG, PRIORITY_CONFIG, type Task, type TaskPriority, type TaskStatus } from '@/lib/types'
 
 interface EditTaskDialogProps {
   task: Task
@@ -64,28 +64,28 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
+            <DialogTitle>Modifica Task</DialogTitle>
             <DialogDescription>
-              Update the task details below.
+              Aggiorna i dettagli del task.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-title">Title *</Label>
+              <Label htmlFor="edit-title">Titolo *</Label>
               <Input
                 id="edit-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter task title"
+                placeholder="Inserisci il titolo del task"
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-priority">Priority</Label>
+                <Label htmlFor="edit-priority">Priorità</Label>
                 <Select
                   value={priority.toString()}
                   onValueChange={(v) => setPriority(Number(v) as TaskPriority)}
@@ -94,14 +94,16 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">High</SelectItem>
-                    <SelectItem value="2">Medium</SelectItem>
-                    <SelectItem value="3">Low</SelectItem>
+                    {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status">Stato</Label>
                 <Select
                   value={status}
                   onValueChange={(v) => setStatus(v as TaskStatus)}
@@ -110,25 +112,27 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TO_BE_STARTED">To Start</SelectItem>
-                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-label">Label</Label>
+                <Label htmlFor="edit-label">Etichetta</Label>
                 <Input
                   id="edit-label"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g., Work, Personal"
+                  placeholder="es. Lavoro, Personale"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-dueDate">Due Date</Label>
+                <Label htmlFor="edit-dueDate">Scadenza</Label>
                 <Input
                   id="edit-dueDate"
                   type="date"
@@ -143,17 +147,17 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
                 id="edit-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Add any additional notes..."
+                placeholder="Aggiungi note aggiuntive..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Annulla
             </Button>
             <Button type="submit" disabled={loading || !title.trim()}>
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? 'Salvataggio...' : 'Salva Modifiche'}
             </Button>
           </DialogFooter>
         </form>

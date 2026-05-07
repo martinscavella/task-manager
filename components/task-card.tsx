@@ -10,40 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontalIcon, PencilIcon, TrashIcon, CheckIcon } from 'lucide-react'
-import { deleteTask, updateTask } from '@/lib/actions'
+import { MoreHorizontalIcon, PencilIcon, TrashIcon, ChevronRight, ChevronLeft, Ban } from 'lucide-react'
+import { deleteTask, updateTaskStatus } from '@/lib/actions'
 import { EditTaskDialog } from './edit-task-dialog'
-import type { Task, TaskStatus, TaskPriority } from '@/lib/types'
+import { TaskWorkflowStepper } from './task-workflow-stepper'
+import { STATUS_CONFIG, PRIORITY_CONFIG, WORKFLOW_STEPS, type Task, type TaskStatus, type TaskPriority } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 interface TaskCardProps {
   task: Task
+  compact?: boolean
 }
 
-const priorityColors: Record<TaskPriority, string> = {
-  1: 'bg-red-100 text-red-800 border-red-200',
-  2: 'bg-amber-100 text-amber-800 border-amber-200',
-  3: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-}
-
-const priorityLabels: Record<TaskPriority, string> = {
-  1: 'High',
-  2: 'Medium',
-  3: 'Low',
-}
-
-const statusColors: Record<TaskStatus, string> = {
-  'TO_BE_STARTED': 'bg-slate-100 text-slate-800 border-slate-200',
-  'IN_PROGRESS': 'bg-blue-100 text-blue-800 border-blue-200',
-  'COMPLETED': 'bg-green-100 text-green-800 border-green-200',
-}
-
-const statusLabels: Record<TaskStatus, string> = {
-  'TO_BE_STARTED': 'To Start',
-  'IN_PROGRESS': 'In Progress',
-  'COMPLETED': 'Completed',
-}
-
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, compact = false }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -53,29 +32,164 @@ export function TaskCard({ task }: TaskCardProps) {
     setDeleting(false)
   }
 
-  const handleToggleComplete = async () => {
-    const newStatus: TaskStatus = task.status === 'COMPLETED' ? 'TO_BE_STARTED' : 'COMPLETED'
-    await updateTask({ id: task.id, status: newStatus })
+  const handleNextStatus = async () => {
+    const currentIndex = WORKFLOW_STEPS.indexOf(task.status)
+    if (currentIndex < WORKFLOW_STEPS.length - 1) {
+      await updateTaskStatus(task.id, WORKFLOW_STEPS[currentIndex + 1])
+    }
+  }
+
+  const handlePrevStatus = async () => {
+    const currentIndex = WORKFLOW_STEPS.indexOf(task.status)
+    if (currentIndex > 0) {
+      await updateTaskStatus(task.id, WORKFLOW_STEPS[currentIndex - 1])
+    }
+  }
+
+  const handleSetBlocked = async () => {
+    await updateTaskStatus(task.id, 'BLOCKED')
+  }
+
+  const handleSetCancelled = async () => {
+    await updateTaskStatus(task.id, 'CANCELLED')
   }
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
+    return new Date(dateStr).toLocaleDateString('it-IT', {
       day: 'numeric',
+      month: 'short',
       year: 'numeric',
     })
   }
 
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'COMPLETED'
+  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
+  const isCompleted = task.status === 'COMPLETED'
+  const isCancelled = task.status === 'CANCELLED'
+  const isBlocked = task.status === 'BLOCKED'
+  
+  const statusConfig = STATUS_CONFIG[task.status]
+  const priorityConfig = PRIORITY_CONFIG[task.priority]
+
+  const currentStepIndex = WORKFLOW_STEPS.indexOf(task.status)
+  const canGoNext = currentStepIndex >= 0 && currentStepIndex < WORKFLOW_STEPS.length - 1
+  const canGoPrev = currentStepIndex > 0
+
+  if (compact) {
+    return (
+      <>
+        <div className={cn(
+          'flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:shadow-sm',
+          (isCompleted || isCancelled) && 'opacity-60',
+          isBlocked && 'border-red-200 bg-red-50/50'
+        )}>
+          {/* Quick status navigation */}
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon-sm" 
+              onClick={handlePrevStatus}
+              disabled={!canGoPrev}
+              className="h-6 w-6"
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+            <TaskWorkflowStepper task={task} compact />
+            <Button 
+              variant="ghost" 
+              size="icon-sm" 
+              onClick={handleNextStatus}
+              disabled={!canGoNext}
+              className="h-6 w-6"
+            >
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {/* Title and badges */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                'font-medium truncate',
+                (isCompleted || isCancelled) && 'line-through text-muted-foreground'
+              )}>
+                {task.title}
+              </span>
+              <Badge className={cn('text-xs shrink-0', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+                {priorityConfig.label}
+              </Badge>
+              {task.label && (
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {task.label}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Due date */}
+          {task.due_date && (
+            <span className={cn(
+              'text-xs shrink-0',
+              isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
+            )}>
+              {formatDate(task.due_date)}
+            </span>
+          )}
+
+          {/* Actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="h-6 w-6 shrink-0">
+                <MoreHorizontalIcon className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <PencilIcon className="size-4" />
+                Modifica
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSetBlocked}>
+                <Ban className="size-4" />
+                Blocca
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={handleSetCancelled}
+              >
+                Annulla Task
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                <TrashIcon className="size-4" />
+                {deleting ? 'Eliminazione...' : 'Elimina'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
+      </>
+    )
+  }
 
   return (
     <>
-      <div className={`group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md ${task.status === 'COMPLETED' ? 'opacity-70' : ''}`}>
+      <div className={cn(
+        'group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md',
+        (isCompleted || isCancelled) && 'opacity-60',
+        isBlocked && 'border-red-200 bg-red-50/50'
+      )}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className={`font-medium text-foreground ${task.status === 'COMPLETED' ? 'line-through text-muted-foreground' : ''}`}>
+              <h3 className={cn(
+                'font-medium text-foreground',
+                (isCompleted || isCancelled) && 'line-through text-muted-foreground'
+              )}>
                 {task.title}
               </h3>
               {task.label && (
@@ -86,15 +200,18 @@ export function TaskCard({ task }: TaskCardProps) {
             </div>
             
             <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <Badge className={priorityColors[task.priority]} variant="outline">
-                {priorityLabels[task.priority]}
+              <Badge className={cn(priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+                {priorityConfig.label}
               </Badge>
-              <Badge className={statusColors[task.status]} variant="outline">
-                {statusLabels[task.status]}
+              <Badge className={cn(statusConfig.bgColor, statusConfig.color)} variant="outline">
+                {statusConfig.label}
               </Badge>
               {task.due_date && (
-                <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
-                  {isOverdue ? 'Overdue: ' : 'Due: '}
+                <span className={cn(
+                  'text-xs',
+                  isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
+                )}>
+                  {isOverdue ? 'Scaduto: ' : 'Scadenza: '}
                   {formatDate(task.due_date)}
                 </span>
               )}
@@ -105,42 +222,68 @@ export function TaskCard({ task }: TaskCardProps) {
                 {task.note}
               </p>
             )}
+
+            {/* Workflow stepper */}
+            <div className="mt-4 flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePrevStatus}
+                disabled={!canGoPrev}
+                className="h-7"
+              >
+                <ChevronLeft className="h-3 w-3 mr-1" />
+                Indietro
+              </Button>
+              <div className="flex-1">
+                <TaskWorkflowStepper task={task} compact />
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleNextStatus}
+                disabled={!canGoNext}
+                className="h-7"
+              >
+                Avanti
+                <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleToggleComplete}
-              className={task.status === 'COMPLETED' ? 'text-green-600' : 'text-muted-foreground'}
-            >
-              <CheckIcon className="size-4" />
-              <span className="sr-only">Toggle complete</span>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreHorizontalIcon className="size-4" />
-                  <span className="sr-only">More options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                  <PencilIcon className="size-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  <TrashIcon className="size-4" />
-                  {deleting ? 'Deleting...' : 'Delete'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm">
+                <MoreHorizontalIcon className="size-4" />
+                <span className="sr-only">Altre opzioni</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <PencilIcon className="size-4" />
+                Modifica
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSetBlocked}>
+                <Ban className="size-4" />
+                Blocca
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={handleSetCancelled}
+              >
+                Annulla Task
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                <TrashIcon className="size-4" />
+                {deleting ? 'Eliminazione...' : 'Elimina'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

@@ -23,13 +23,13 @@ import {
 } from '@/components/ui/select'
 import { PlusIcon } from 'lucide-react'
 import { createTask } from '@/lib/actions'
-import type { TaskPriority, TaskStatus } from '@/lib/types'
+import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskPriority, type TaskStatus } from '@/lib/types'
 
 export function CreateTaskDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [title, setTitle] = useState('')
-  const [priority, setPriority] = useState<TaskPriority>(2)
+  const [priority, setPriority] = useState<TaskPriority>(3)
   const [status, setStatus] = useState<TaskStatus>('TO_BE_STARTED')
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -37,7 +37,7 @@ export function CreateTaskDialog() {
 
   const resetForm = () => {
     setTitle('')
-    setPriority(2)
+    setPriority(3)
     setStatus('TO_BE_STARTED')
     setLabel('')
     setDueDate('')
@@ -73,31 +73,31 @@ export function CreateTaskDialog() {
       <DialogTrigger asChild>
         <Button>
           <PlusIcon className="size-4" />
-          Add Task
+          Nuovo Task
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
+            <DialogTitle>Crea Nuovo Task</DialogTitle>
             <DialogDescription>
-              Add a new task to your list. Fill in the details below.
+              Aggiungi un nuovo task alla lista. Compila i dettagli sotto.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">Titolo *</Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter task title"
+                placeholder="Inserisci il titolo del task"
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="priority">Priority</Label>
+                <Label htmlFor="priority">Priorità</Label>
                 <Select
                   value={priority.toString()}
                   onValueChange={(v) => setPriority(Number(v) as TaskPriority)}
@@ -106,14 +106,16 @@ export function CreateTaskDialog() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">High</SelectItem>
-                    <SelectItem value="2">Medium</SelectItem>
-                    <SelectItem value="3">Low</SelectItem>
+                    {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">Stato</Label>
                 <Select
                   value={status}
                   onValueChange={(v) => setStatus(v as TaskStatus)}
@@ -122,25 +124,27 @@ export function CreateTaskDialog() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TO_BE_STARTED">To Start</SelectItem>
-                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="label">Label</Label>
+                <Label htmlFor="label">Etichetta</Label>
                 <Input
                   id="label"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g., Work, Personal"
+                  placeholder="es. Lavoro, Personale"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date</Label>
+                <Label htmlFor="dueDate">Scadenza</Label>
                 <Input
                   id="dueDate"
                   type="date"
@@ -155,17 +159,17 @@ export function CreateTaskDialog() {
                 id="note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Add any additional notes..."
+                placeholder="Aggiungi note aggiuntive..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              Annulla
             </Button>
             <Button type="submit" disabled={loading || !title.trim()}>
-              {loading ? 'Creating...' : 'Create Task'}
+              {loading ? 'Creazione...' : 'Crea Task'}
             </Button>
           </DialogFooter>
         </form>
