@@ -14,6 +14,7 @@ import { MoreHorizontalIcon, PencilIcon, TrashIcon, ChevronRight, ChevronLeft, B
 import { deleteTask, updateTaskStatus } from '@/lib/actions'
 import { EditTaskDialog } from './edit-task-dialog'
 import { TaskWorkflowStepper } from './task-workflow-stepper'
+import { StepBadge } from './step-badge'
 import { STATUS_CONFIG, PRIORITY_CONFIG, WORKFLOW_STEPS, type Task, type TaskStatus, type TaskPriority } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -108,13 +109,14 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
 
           {/* Title and badges */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
                 'font-medium truncate',
                 (isCompleted || isCancelled) && 'line-through text-muted-foreground'
               )}>
                 {task.title}
               </span>
+              <StepBadge variant="compact" step={statusConfig.label} />
               <Badge className={cn('text-xs shrink-0', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
@@ -203,9 +205,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
               <Badge className={cn(priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
-              <Badge className={cn(statusConfig.bgColor, statusConfig.color)} variant="outline">
-                {statusConfig.label}
-              </Badge>
+              <StepBadge variant="full" step={statusConfig.label} />
               {task.due_date && (
                 <span className={cn(
                   'text-xs',

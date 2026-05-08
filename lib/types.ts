@@ -55,5 +55,17 @@ export const WORKFLOW_STEPS: TaskStatus[] = [
   'COMPLETED',
 ]
 
-export type ViewMode = 'list' | 'cards' | 'kanban'
+export type ViewMode = 'list' | 'board' | 'grid'
 export type GroupBy = 'none' | 'status' | 'priority' | 'label'
+export type SortBy = 'created_at' | 'due_date' | 'priority' | 'title'
+export type SortOrder = 'asc' | 'desc'
+
+export interface ViewSettings {
+  viewMode: ViewMode
+  groupBy: GroupBy
+  sortBy: SortBy
+  sortOrder: SortOrder
+  filterStatus: string[]
+  filterPriority: string[]
+  searchQuery: string
+}
