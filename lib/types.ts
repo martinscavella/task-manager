@@ -23,11 +23,12 @@ export interface Task {
   jira_key: string | null
   code: string | null
   info: string | null
+  user_id: string | null
   created_at: string
   completed_at: string | null
 }
 
-export type CreateTaskInput = Omit<Task, 'id' | 'created_at' | 'completed_at'>
+export type CreateTaskInput = Omit<Task, 'id' | 'created_at' | 'completed_at' | 'user_id'>
 export type UpdateTaskInput = Partial<CreateTaskInput> & { id: string }
 
 export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bgColor: string; order: number }> = {
