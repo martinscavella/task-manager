@@ -19,6 +19,22 @@ export async function getTasks(): Promise<Task[]> {
   return data as Task[]
 }
 
+export async function getTaskById(id: string): Promise<Task | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) {
+    console.error('Error fetching task:', error)
+    return null
+  }
+
+  return data as Task
+}
+
 export async function createTask(input: CreateTaskInput): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -69,6 +85,7 @@ export async function updateTask(input: UpdateTaskInput): Promise<{ success: boo
   }
 
   revalidatePath('/', 'max')
+  revalidatePath(`/tasks/${id}`, 'page')
   return { success: true }
 }
 

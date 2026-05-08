@@ -1,6 +1,6 @@
 'use client'
 
-import { WORKFLOW_STEPS, STATUS_CONFIG, type Task, type TaskStatus } from '@/lib/types'
+import { STATUS_CONFIG, type Task, type TaskStatus } from '@/lib/types'
 import { updateTaskStatus } from '@/lib/actions'
 import { cn } from '@/lib/utils'
 import { useTransition } from 'react'
@@ -16,12 +16,14 @@ interface TaskWorkflowStepperProps {
   compact?: boolean
 }
 
-export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepperProps) {
+// Steps always visible in the stepper
+const BASE_STEPS: TaskStatus[] = ['TO_BE_STARTED', 'IN_PROGRESS', 'IN_TEST', 'COMPLETED']
+
+// States that are "extra" - shown as an additional badge when active
+const EXTRA_STATES: TaskStatus[] = ['BACKLOG', 'WAITING_REQUIREMENTS', 'IN_REVIEW', 'BLOCKED', 'CANCELLED']
+
+export function TaskWorkflowStepper({ task }: TaskWorkflowStepperProps) {
   const [isPending, startTransition] = useTransition()
-  
-  const currentStepIndex = WORKFLOW_STEPS.indexOf(task.status as TaskStatus)
-  const isBlocked = task.status === 'BLOCKED'
-  const isCancelled = task.status === 'CANCELLED'
 
   const handleStepClick = (status: TaskStatus) => {
     if (isPending) return
@@ -30,38 +32,35 @@ export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepp
     })
   }
 
-  // Simplified steps for compact view
-  const simpleSteps: TaskStatus[] = ['BACKLOG', 'WAITING_REQUIREMENTS', 'IN_PROGRESS', 'COMPLETED']
-  const stepsToShow = compact ? simpleSteps : WORKFLOW_STEPS
+  const currentIsExtra = EXTRA_STATES.includes(task.status as TaskStatus)
 
-  // Find current position in the steps array
-  const getCurrentIndex = () => {
-    const idx = stepsToShow.indexOf(task.status as TaskStatus)
-    if (idx >= 0) return idx // Status found directly in simple steps
-    
-    // Map full workflow steps to simplified indices
-    const fullIdx = WORKFLOW_STEPS.indexOf(task.status as TaskStatus)
-    if (fullIdx <= 1) return 0 // BACKLOG or TO_BE_STARTED -> index 0
-    if (fullIdx === 2) return 1 // WAITING_REQUIREMENTS -> index 1
-    if (fullIdx >= 3 && fullIdx <= 5) return 2 // IN_PROGRESS, IN_REVIEW, IN_TEST -> index 2
-    if (fullIdx === 6) return 3 // COMPLETED -> index 3
-    return 2 // Default to IN_PROGRESS
+  // Find which base step is "active" when current status is an extra one
+  const getActiveBaseIndex = (): number => {
+    if (!currentIsExtra) return BASE_STEPS.indexOf(task.status as TaskStatus)
+    switch (task.status) {
+      case 'BACKLOG': return -1
+      case 'WAITING_REQUIREMENTS': return 0 // before IN_PROGRESS
+      case 'IN_REVIEW': return 2 // after IN_TEST
+      case 'BLOCKED': return BASE_STEPS.indexOf('IN_PROGRESS')
+      case 'CANCELLED': return -1
+      default: return -1
+    }
   }
 
-  const activeIndex = getCurrentIndex()
+  const activeBaseIndex = getActiveBaseIndex()
 
   return (
     <TooltipProvider>
       <div className={cn(
-        'inline-flex items-center rounded-full bg-stone-100 p-1',
+        'inline-flex items-center gap-1 rounded-full bg-stone-100 p-1 flex-wrap',
         isPending && 'opacity-50 pointer-events-none'
       )}>
-        {stepsToShow.map((step, index) => {
+        {BASE_STEPS.map((step, index) => {
           const config = STATUS_CONFIG[step]
-          const isActive = task.status === step || (compact && activeIndex === index && !stepsToShow.includes(task.status as TaskStatus))
-          const isPast = compact ? index < activeIndex : currentStepIndex > WORKFLOW_STEPS.indexOf(step)
-          const isFirst = index === 0
-          const isLast = index === stepsToShow.length - 1
+          const isActive = task.status === step
+          const isPast = !currentIsExtra
+            ? BASE_STEPS.indexOf(task.status as TaskStatus) > index
+            : index < activeBaseIndex
 
           return (
             <div key={step} className="flex items-center">
@@ -71,7 +70,7 @@ export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepp
                     onClick={() => handleStepClick(step)}
                     disabled={isPending}
                     className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-all rounded-full',
+                      'px-3 py-1.5 text-xs font-medium transition-all rounded-full whitespace-nowrap',
                       'hover:bg-stone-200/80',
                       isActive && 'bg-white shadow-sm text-stone-900',
                       !isActive && isPast && 'text-stone-600',
@@ -79,9 +78,7 @@ export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepp
                     )}
                   >
                     <span className="flex items-center gap-1.5">
-                      {isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      )}
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />}
                       {config.label}
                     </span>
                   </button>
@@ -91,10 +88,9 @@ export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepp
                 </TooltipContent>
               </Tooltip>
 
-              {/* Connector dot */}
-              {!isLast && (
+              {index < BASE_STEPS.length - 1 && (
                 <span className={cn(
-                  'w-1 h-1 rounded-full mx-0.5',
+                  'w-1 h-1 rounded-full mx-0.5 shrink-0',
                   isPast ? 'bg-stone-400' : 'bg-stone-300'
                 )} />
               )}
@@ -102,22 +98,37 @@ export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepp
           )
         })}
 
-        {/* Blocked/Cancelled indicator */}
-        {(isBlocked || isCancelled) && (
+        {/* Extra state badge — shown only when task is in an "extra" status */}
+        {currentIsExtra && (
           <>
-            <span className="w-1 h-1 rounded-full mx-0.5 bg-stone-300" />
-            <span className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-full bg-white shadow-sm',
-              isBlocked ? 'text-red-600' : 'text-stone-500'
-            )}>
-              <span className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full mx-0.5 bg-stone-300 shrink-0" />
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <span className={cn(
-                  'w-1.5 h-1.5 rounded-full',
-                  isBlocked ? 'bg-red-500' : 'bg-stone-400'
-                )} />
-                {isBlocked ? 'Bloccato' : 'Annullato'}
-              </span>
-            </span>
+                  'px-3 py-1.5 text-xs font-medium rounded-full bg-white shadow-sm whitespace-nowrap',
+                  task.status === 'BLOCKED' && 'text-red-600',
+                  task.status === 'CANCELLED' && 'text-stone-500',
+                  task.status === 'BACKLOG' && 'text-slate-600',
+                  task.status === 'WAITING_REQUIREMENTS' && 'text-amber-700',
+                  task.status === 'IN_REVIEW' && 'text-purple-700',
+                )}>
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn(
+                      'w-1.5 h-1.5 rounded-full shrink-0',
+                      task.status === 'BLOCKED' && 'bg-red-500',
+                      task.status === 'CANCELLED' && 'bg-stone-400',
+                      task.status === 'BACKLOG' && 'bg-slate-500',
+                      task.status === 'WAITING_REQUIREMENTS' && 'bg-amber-500',
+                      task.status === 'IN_REVIEW' && 'bg-purple-500',
+                    )} />
+                    {STATUS_CONFIG[task.status as TaskStatus].label}
+                  </span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Stato attuale: {STATUS_CONFIG[task.status as TaskStatus].label}
+              </TooltipContent>
+            </Tooltip>
           </>
         )}
       </div>

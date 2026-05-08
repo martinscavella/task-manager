@@ -13,17 +13,17 @@ import {
 import { TaskCard } from './task-card'
 import { CreateTaskDialog } from './create-task-dialog'
 import { useViewSettings } from '@/hooks/use-view-settings'
-import { 
-  STATUS_CONFIG, 
-  PRIORITY_CONFIG, 
-  type Task, 
-  type TaskStatus, 
+import {
+  STATUS_CONFIG,
+  PRIORITY_CONFIG,
+  type Task,
+  type TaskStatus,
   type TaskPriority,
 } from '@/lib/types'
-import { 
-  SearchIcon, 
-  LayoutGrid, 
-  List, 
+import {
+  SearchIcon,
+  LayoutGrid,
+  List,
   Kanban,
   ChevronDown,
   ChevronRight,
@@ -35,6 +35,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 interface TaskListProps {
   tasks: Task[]
 }
+
+// Columns always shown in kanban
+const KANBAN_BASE: TaskStatus[] = ['TO_BE_STARTED', 'IN_PROGRESS', 'IN_TEST', 'COMPLETED']
 
 export function TaskList({ tasks }: TaskListProps) {
   const {
@@ -49,20 +52,16 @@ export function TaskList({ tasks }: TaskListProps) {
     setSearchQuery,
   } = useViewSettings()
 
-  // Map internal viewMode to storage viewMode
   const getInternalViewMode = (viewMode: 'list' | 'board' | 'grid'): 'list' | 'cards' | 'kanban' => {
     if (viewMode === 'list') return 'list'
     if (viewMode === 'board') return 'kanban'
-    return 'cards' // grid
+    return 'cards'
   }
 
   const internalViewMode = getInternalViewMode(settings.viewMode)
-
-  // Parse filter strings
   const statusFilter = settings.filterStatus.length === 0 ? 'all' : settings.filterStatus[0]
   const priorityFilter = settings.filterPriority.length === 0 ? 'all' : settings.filterPriority[0]
 
-  // Filter tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchesSearch = task.title.toLowerCase().includes(settings.searchQuery.toLowerCase()) ||
@@ -74,19 +73,13 @@ export function TaskList({ tasks }: TaskListProps) {
     })
   }, [tasks, settings.searchQuery, statusFilter, priorityFilter])
 
-  // Sort tasks
   const sortedAndFiltered = useMemo(() => {
     const sorted = [...filteredTasks]
     sorted.sort((a, b) => {
       let compareValue = 0
-      
       switch (settings.sortBy) {
-        case 'title':
-          compareValue = a.title.localeCompare(b.title)
-          break
-        case 'priority':
-          compareValue = a.priority - b.priority
-          break
+        case 'title': compareValue = a.title.localeCompare(b.title); break
+        case 'priority': compareValue = a.priority - b.priority; break
         case 'due_date':
           if (!a.due_date && !b.due_date) compareValue = 0
           else if (!a.due_date) compareValue = 1
@@ -98,144 +91,105 @@ export function TaskList({ tasks }: TaskListProps) {
           compareValue = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           break
       }
-      
       return settings.sortOrder === 'asc' ? compareValue : -compareValue
     })
     return sorted
   }, [filteredTasks, settings.sortBy, settings.sortOrder])
 
-  // Separate active and completed tasks
   const { activeTasks, completedTasks, cancelledTasks } = useMemo(() => {
     const active: Task[] = []
     const completed: Task[] = []
     const cancelled: Task[] = []
-
     sortedAndFiltered.forEach(task => {
-      if (task.status === 'COMPLETED') {
-        completed.push(task)
-      } else if (task.status === 'CANCELLED') {
-        cancelled.push(task)
-      } else {
-        active.push(task)
-      }
+      if (task.status === 'COMPLETED') completed.push(task)
+      else if (task.status === 'CANCELLED') cancelled.push(task)
+      else active.push(task)
     })
-
     return { activeTasks: active, completedTasks: completed, cancelledTasks: cancelled }
   }, [sortedAndFiltered])
 
-  // Group tasks
   const groupedTasks = useMemo(() => {
-    if (settings.groupBy === 'none') {
-      return { 'Tutti i Task': activeTasks }
-    }
-
+    if (settings.groupBy === 'none') return { 'Tutti i Task': activeTasks }
     const groups: Record<string, Task[]> = {}
-
     activeTasks.forEach(task => {
       let key: string
-
       switch (settings.groupBy) {
-        case 'status':
-          key = STATUS_CONFIG[task.status]?.label || task.status
-          break
-        case 'priority':
-          key = PRIORITY_CONFIG[task.priority]?.label || `P${task.priority}`
-          break
-        case 'label':
-          key = task.label || 'Senza etichetta'
-          break
-        default:
-          key = 'Tutti'
+        case 'status': key = STATUS_CONFIG[task.status]?.label || task.status; break
+        case 'priority': key = PRIORITY_CONFIG[task.priority as TaskPriority]?.label || `P${task.priority}`; break
+        case 'label': key = task.label || 'Senza etichetta'; break
+        default: key = 'Tutti'
       }
-
-      if (!groups[key]) {
-        groups[key] = []
-      }
+      if (!groups[key]) groups[key] = []
       groups[key].push(task)
     })
-
-    // Sort groups
     if (settings.groupBy === 'priority') {
       const priorityOrder = ['Critica', 'Alta', 'Media', 'Bassa']
       const sorted: Record<string, Task[]> = {}
-      priorityOrder.forEach(p => {
-        if (groups[p]) sorted[p] = groups[p]
-      })
+      priorityOrder.forEach(p => { if (groups[p]) sorted[p] = groups[p] })
       return sorted
     }
-
     if (settings.groupBy === 'status') {
       const statusOrder = Object.values(STATUS_CONFIG).sort((a, b) => a.order - b.order).map(s => s.label)
       const sorted: Record<string, Task[]> = {}
-      statusOrder.forEach(s => {
-        if (groups[s]) sorted[s] = groups[s]
-      })
+      statusOrder.forEach(s => { if (groups[s]) sorted[s] = groups[s] })
       return sorted
     }
-
     return groups
   }, [activeTasks, settings.groupBy])
+
+  const renderKanban = (taskList: Task[]) => {
+    // Determine which extra columns have tasks
+    const allStatuses = Object.keys(STATUS_CONFIG) as TaskStatus[]
+    const extraStatuses = allStatuses.filter(
+      s => !KANBAN_BASE.includes(s) && taskList.some(t => t.status === s)
+    )
+    const columnsToShow = [...KANBAN_BASE, ...extraStatuses]
+
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {columnsToShow.map((status) => {
+          const config = STATUS_CONFIG[status]
+          const statusTasks = taskList.filter(t => t.status === status)
+          if (statusFilter !== 'all' && status !== statusFilter) return null
+          return (
+            <div key={status} className="flex-shrink-0 w-72">
+              <div className={cn('rounded-t-lg px-3 py-2', config.bgColor)}>
+                <h3 className={cn('font-medium text-sm', config.color)}>
+                  {config.label} ({statusTasks.length})
+                </h3>
+              </div>
+              <div className="bg-muted/30 rounded-b-lg p-2 min-h-[200px] space-y-2">
+                {statusTasks.map(task => (
+                  <TaskCard key={task.id} task={task} compact />
+                ))}
+                {statusTasks.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nessun task</p>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
 
   const renderTasks = (taskList: Task[]) => {
     if (internalViewMode === 'list') {
       return (
         <div className="space-y-2">
-          {taskList.map((task) => (
-            <TaskCard key={task.id} task={task} compact />
-          ))}
+          {taskList.map((task) => <TaskCard key={task.id} task={task} compact />)}
         </div>
       )
     }
-
-    if (internalViewMode === 'kanban') {
-      const statusGroups: Record<string, Task[]> = {}
-      Object.keys(STATUS_CONFIG).forEach(status => {
-        statusGroups[status] = taskList.filter(t => t.status === status)
-      })
-
-      return (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-            const statusTasks = statusGroups[status] || []
-            if (statusFilter !== 'all' && status !== statusFilter) return null
-            
-            return (
-              <div key={status} className="flex-shrink-0 w-72">
-                <div className={cn('rounded-t-lg px-3 py-2', config.bgColor)}>
-                  <h3 className={cn('font-medium text-sm', config.color)}>
-                    {config.label} ({statusTasks.length})
-                  </h3>
-                </div>
-                <div className="bg-muted/30 rounded-b-lg p-2 min-h-[200px] space-y-2">
-                  {statusTasks.map(task => (
-                    <TaskCard key={task.id} task={task} compact />
-                  ))}
-                  {statusTasks.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      Nessun task
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )
-    }
-
     // Cards view (grid)
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {taskList.map((task) => (
-          <TaskCard key={task.id} task={task} />
-        ))}
+        {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
       </div>
     )
   }
 
-  if (!isLoaded) {
-    return null
-  }
+  if (!isLoaded) return null
 
   return (
     <div className="space-y-6">
@@ -262,9 +216,7 @@ export function TaskList({ tasks }: TaskListProps) {
           <SelectContent>
             <SelectItem value="all">Tutti gli stati</SelectItem>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.label}
-              </SelectItem>
+              <SelectItem key={key} value={key}>{config.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -276,9 +228,7 @@ export function TaskList({ tasks }: TaskListProps) {
           <SelectContent>
             <SelectItem value="all">Tutte le priorità</SelectItem>
             {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.label}
-              </SelectItem>
+              <SelectItem key={key} value={key}>{config.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -308,43 +258,17 @@ export function TaskList({ tasks }: TaskListProps) {
           </SelectContent>
         </Select>
 
-        <Button
-          variant={settings.sortOrder === 'asc' ? 'secondary' : 'ghost'}
-          size="icon-sm"
-          onClick={() => setSortOrder('asc')}
-          title="Ordine crescente"
-        >
-          ↑
-        </Button>
-        <Button
-          variant={settings.sortOrder === 'desc' ? 'secondary' : 'ghost'}
-          size="icon-sm"
-          onClick={() => setSortOrder('desc')}
-          title="Ordine decrescente"
-        >
-          ↓
-        </Button>
+        <Button variant={settings.sortOrder === 'asc' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setSortOrder('asc')} title="Ordine crescente">↑</Button>
+        <Button variant={settings.sortOrder === 'desc' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setSortOrder('desc')} title="Ordine decrescente">↓</Button>
 
         <div className="flex items-center gap-1 ml-auto border rounded-lg p-1">
-          <Button
-            variant={settings.viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            onClick={() => setViewMode('list')}
-          >
+          <Button variant={settings.viewMode === 'list' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('list')}>
             <List className="size-4" />
           </Button>
-          <Button
-            variant={settings.viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            onClick={() => setViewMode('grid')}
-          >
+          <Button variant={settings.viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('grid')}>
             <LayoutGrid className="size-4" />
           </Button>
-          <Button
-            variant={settings.viewMode === 'board' ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            onClick={() => setViewMode('board')}
-          >
+          <Button variant={settings.viewMode === 'board' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('board')}>
             <Kanban className="size-4" />
           </Button>
         </div>
@@ -357,18 +281,14 @@ export function TaskList({ tasks }: TaskListProps) {
           <p className="text-sm mt-1">Prova a modificare i filtri o crea un nuovo task</p>
         </div>
       ) : internalViewMode === 'kanban' ? (
-        renderTasks(sortedAndFiltered)
+        renderKanban(sortedAndFiltered)
       ) : (
         <div className="space-y-6">
-          {/* Active Tasks */}
           {settings.groupBy === 'none' ? (
             activeTasks.length > 0 && renderTasks(activeTasks)
           ) : (
             Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
-              <Collapsible 
-                key={groupName}
-                defaultOpen
-              >
+              <Collapsible key={groupName} defaultOpen>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2">
                     <ChevronRight className="size-4" />
@@ -383,7 +303,6 @@ export function TaskList({ tasks }: TaskListProps) {
             ))
           )}
 
-          {/* Completed Tasks Section */}
           {completedTasks.length > 0 && (
             <Collapsible defaultOpen={false}>
               <CollapsibleTrigger asChild>
@@ -394,24 +313,11 @@ export function TaskList({ tasks }: TaskListProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
-                {internalViewMode === 'list' ? (
-                  <div className="space-y-2">
-                    {completedTasks.map((task) => (
-                      <TaskCard key={task.id} task={task} compact />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {completedTasks.map((task) => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
-                  </div>
-                )}
+                {renderTasks(completedTasks)}
               </CollapsibleContent>
             </Collapsible>
           )}
 
-          {/* Cancelled Tasks Section */}
           {cancelledTasks.length > 0 && (
             <Collapsible defaultOpen={false}>
               <CollapsibleTrigger asChild>
@@ -422,19 +328,7 @@ export function TaskList({ tasks }: TaskListProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
-                {internalViewMode === 'list' ? (
-                  <div className="space-y-2">
-                    {cancelledTasks.map((task) => (
-                      <TaskCard key={task.id} task={task} compact />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {cancelledTasks.map((task) => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
-                  </div>
-                )}
+                {renderTasks(cancelledTasks)}
               </CollapsibleContent>
             </Collapsible>
           )}
