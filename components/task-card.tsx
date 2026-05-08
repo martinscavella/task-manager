@@ -13,9 +13,11 @@ import {
 import { MoreHorizontalIcon, PencilIcon, TrashIcon, ChevronRight, ChevronLeft, Ban } from 'lucide-react'
 import { deleteTask, updateTaskStatus } from '@/lib/actions'
 import { EditTaskDialog } from './edit-task-dialog'
+import { TaskDetailSheet } from './task-detail-sheet'
 import { TaskWorkflowStepper } from './task-workflow-stepper'
 import { StepBadge } from './step-badge'
 import { STATUS_CONFIG, PRIORITY_CONFIG, WORKFLOW_STEPS, type Task, type TaskStatus, type TaskPriority } from '@/lib/types'
+import { getDueDateStatus, formatDateWithStatus } from '@/lib/due-date-utils'
 import { cn } from '@/lib/utils'
 
 interface TaskCardProps {
@@ -25,6 +27,7 @@ interface TaskCardProps {
 
 export function TaskCard({ task, compact = false }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -55,22 +58,13 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
     await updateTaskStatus(task.id, 'CANCELLED')
   }
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return null
-    return new Date(dateStr).toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
-
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
   const isCompleted = task.status === 'COMPLETED'
   const isCancelled = task.status === 'CANCELLED'
   const isBlocked = task.status === 'BLOCKED'
   
   const statusConfig = STATUS_CONFIG[task.status]
   const priorityConfig = PRIORITY_CONFIG[task.priority]
+  const dueDateStatus = getDueDateStatus(task.due_date, task.status)
 
   const currentStepIndex = WORKFLOW_STEPS.indexOf(task.status)
   const canGoNext = currentStepIndex >= 0 && currentStepIndex < WORKFLOW_STEPS.length - 1
@@ -79,13 +73,15 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
   if (compact) {
     return (
       <>
-        <div className={cn(
-          'flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:shadow-sm',
-          (isCompleted || isCancelled) && 'opacity-60',
-          isBlocked && 'border-red-200 bg-red-50/50'
-        )}>
+        <div
+          onClick={() => setDetailOpen(true)}
+          className={cn(
+            'flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:shadow-sm cursor-pointer hover:bg-card/80',
+            (isCompleted || isCancelled) && 'opacity-60',
+            isBlocked && 'border-red-200 bg-red-50/50'
+          )}>
           {/* Quick status navigation */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Button 
               variant="ghost" 
               size="icon-sm" 
@@ -131,16 +127,18 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
           {/* Due date */}
           {task.due_date && (
             <span className={cn(
-              'text-xs shrink-0',
-              isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
+              'text-xs shrink-0 font-medium',
+              dueDateStatus === 'overdue' && 'text-red-600',
+              dueDateStatus === 'due-today' && 'text-orange-600',
+              dueDateStatus === 'upcoming' && 'text-muted-foreground'
             )}>
-              {formatDate(task.due_date)}
+              {formatDateWithStatus(task.due_date, dueDateStatus)}
             </span>
           )}
 
           {/* Actions */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon-sm" className="h-6 w-6 shrink-0">
                 <MoreHorizontalIcon className="size-3" />
               </Button>
@@ -173,6 +171,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
           </DropdownMenu>
         </div>
 
+        <TaskDetailSheet task={task} open={detailOpen} onOpenChange={setDetailOpen} />
         <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
       </>
     )
@@ -180,11 +179,13 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
 
   return (
     <>
-      <div className={cn(
-        'group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md',
-        (isCompleted || isCancelled) && 'opacity-60',
-        isBlocked && 'border-red-200 bg-red-50/50'
-      )}>
+      <div
+        onClick={() => setDetailOpen(true)}
+        className={cn(
+          'group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
+          (isCompleted || isCancelled) && 'opacity-60',
+          isBlocked && 'border-red-200 bg-red-50/50'
+        )}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -208,11 +209,12 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
               <StepBadge variant="full" step={statusConfig.label} />
               {task.due_date && (
                 <span className={cn(
-                  'text-xs',
-                  isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
+                  'text-xs font-medium',
+                  dueDateStatus === 'overdue' && 'text-red-600',
+                  dueDateStatus === 'due-today' && 'text-orange-600',
+                  dueDateStatus === 'upcoming' && 'text-muted-foreground'
                 )}>
-                  {isOverdue ? 'Scaduto: ' : 'Scadenza: '}
-                  {formatDate(task.due_date)}
+                  {formatDateWithStatus(task.due_date, dueDateStatus)}
                 </span>
               )}
             </div>
@@ -224,7 +226,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
             )}
 
             {/* Workflow stepper */}
-            <div className="mt-4 flex items-center gap-2">
+            <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -252,7 +254,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
           </div>
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon-sm">
                 <MoreHorizontalIcon className="size-4" />
                 <span className="sr-only">Altre opzioni</span>
@@ -287,6 +289,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
         </div>
       </div>
 
+      <TaskDetailSheet task={task} open={detailOpen} onOpenChange={setDetailOpen} />
       <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
     </>
   )

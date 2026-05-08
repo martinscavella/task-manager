@@ -37,14 +37,15 @@ export function TaskWorkflowStepper({ task, compact = false }: TaskWorkflowStepp
   // Find current position in the steps array
   const getCurrentIndex = () => {
     const idx = stepsToShow.indexOf(task.status as TaskStatus)
-    if (idx >= 0) return idx
-    // If current status is not in simpleSteps, find closest
+    if (idx >= 0) return idx // Status found directly in simple steps
+    
+    // Map full workflow steps to simplified indices
     const fullIdx = WORKFLOW_STEPS.indexOf(task.status as TaskStatus)
-    if (fullIdx <= 0) return 0
-    if (fullIdx >= WORKFLOW_STEPS.length - 1) return stepsToShow.length - 1
-    // Map intermediate steps
-    if (task.status === 'IN_REVIEW' || task.status === 'IN_TEST') return 2
-    return 2
+    if (fullIdx <= 1) return 0 // BACKLOG or TO_BE_STARTED -> index 0
+    if (fullIdx === 2) return 1 // WAITING_REQUIREMENTS -> index 1
+    if (fullIdx >= 3 && fullIdx <= 5) return 2 // IN_PROGRESS, IN_REVIEW, IN_TEST -> index 2
+    if (fullIdx === 6) return 3 // COMPLETED -> index 3
+    return 2 // Default to IN_PROGRESS
   }
 
   const activeIndex = getCurrentIndex()

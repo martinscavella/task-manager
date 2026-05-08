@@ -19,6 +19,10 @@ export interface Task {
   label: string | null
   due_date: string | null
   note: string | null
+  jira_url: string | null
+  jira_key: string | null
+  code: string | null
+  info: string | null
   created_at: string
   completed_at: string | null
 }

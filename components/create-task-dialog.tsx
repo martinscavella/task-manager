@@ -34,6 +34,10 @@ export function CreateTaskDialog() {
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [note, setNote] = useState('')
+  const [jiraUrl, setJiraUrl] = useState('')
+  const [jiraKey, setJiraKey] = useState('')
+  const [code, setCode] = useState('')
+  const [info, setInfo] = useState('')
 
   const resetForm = () => {
     setTitle('')
@@ -42,6 +46,10 @@ export function CreateTaskDialog() {
     setLabel('')
     setDueDate('')
     setNote('')
+    setJiraUrl('')
+    setJiraKey('')
+    setCode('')
+    setInfo('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,6 +65,10 @@ export function CreateTaskDialog() {
         label: label.trim() || null,
         due_date: dueDate || null,
         note: note.trim() || null,
+        jira_url: jiraUrl.trim() || null,
+        jira_key: jiraKey.trim() || null,
+        code: code.trim() || null,
+        info: info.trim() || null,
       })
 
       if (result.success) {
@@ -162,6 +174,54 @@ export function CreateTaskDialog() {
                 placeholder="Aggiungi note aggiuntive..."
                 rows={3}
               />
+            </div>
+
+            {/* Jira/Bug Section */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold mb-4">Jira / Bug Tracking (Opzionale)</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="jiraKey">Jira Key</Label>
+                  <Input
+                    id="jiraKey"
+                    value={jiraKey}
+                    onChange={(e) => setJiraKey(e.target.value)}
+                    placeholder="es. PROJ-123"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="jiraUrl">Jira Link</Label>
+                  <Input
+                    id="jiraUrl"
+                    value={jiraUrl}
+                    onChange={(e) => setJiraUrl(e.target.value)}
+                    placeholder="https://jira.example.com/..."
+                    type="url"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2 mt-4">
+                <Label htmlFor="code">Codice / Commit</Label>
+                <Input
+                  id="code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="es. abc1234, feature/bug-fix"
+                />
+              </div>
+
+              <div className="grid gap-2 mt-4">
+                <Label htmlFor="info">Informazioni Aggiuntive</Label>
+                <Textarea
+                  id="info"
+                  value={info}
+                  onChange={(e) => setInfo(e.target.value)}
+                  placeholder="Note tecniche, stack trace, ecc..."
+                  rows={2}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
