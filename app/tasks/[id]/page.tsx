@@ -1,14 +1,23 @@
+import { Suspense } from 'react'
 import { getTaskById } from '@/lib/actions'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { TaskDetailView } from '@/components/task-detail-view'
+import TaskDetailLoading from './loading'
+
+// Forza rendering dinamico — nessun tentativo di cache statica
+export const dynamic = 'force-dynamic'
+
+async function TaskDetailData({ id }: { id: string }) {
+  const task = await getTaskById(id)
+  if (!task) notFound()
+  return <TaskDetailView task={task} />
+}
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const task = await getTaskById(id)
-  if (!task) notFound()
 
   return (
     <main className="min-h-screen bg-background">
@@ -21,7 +30,10 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
             </Link>
           </Button>
         </div>
-        <TaskDetailView task={task} />
+        {/* Suspense: mostra skeleton mentre il server fetcha il task */}
+        <Suspense fallback={<TaskDetailLoading />}>
+          <TaskDetailData id={id} />
+        </Suspense>
       </div>
     </main>
   )

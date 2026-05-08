@@ -60,7 +60,7 @@ export async function createTask(input: CreateTaskInput): Promise<{ success: boo
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/', 'max')
+  revalidatePath('/', 'page')
   return { success: true }
 }
 
@@ -84,7 +84,8 @@ export async function updateTask(input: UpdateTaskInput): Promise<{ success: boo
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/', 'max')
+  // Invalida solo le pagine effettivamente toccate
+  revalidatePath('/', 'page')
   revalidatePath(`/tasks/${id}`, 'page')
   return { success: true }
 }
@@ -102,7 +103,7 @@ export async function deleteTask(id: string): Promise<{ success: boolean; error?
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/', 'max')
+  revalidatePath('/', 'page')
   return { success: true }
 }
 
