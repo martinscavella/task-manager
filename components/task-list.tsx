@@ -25,7 +25,6 @@ import {
   LayoutGrid,
   List,
   Kanban,
-  ChevronDown,
   ChevronRight,
   FolderIcon
 } from 'lucide-react'
@@ -36,7 +35,6 @@ interface TaskListProps {
   tasks: Task[]
 }
 
-// Columns always shown in kanban
 const KANBAN_BASE: TaskStatus[] = ['TO_BE_STARTED', 'IN_PROGRESS', 'IN_TEST', 'COMPLETED']
 
 export function TaskList({ tasks }: TaskListProps) {
@@ -64,7 +62,8 @@ export function TaskList({ tasks }: TaskListProps) {
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const matchesSearch = task.title.toLowerCase().includes(settings.searchQuery.toLowerCase()) ||
+      const matchesSearch =
+        task.title.toLowerCase().includes(settings.searchQuery.toLowerCase()) ||
         (task.note?.toLowerCase().includes(settings.searchQuery.toLowerCase())) ||
         (task.label?.toLowerCase().includes(settings.searchQuery.toLowerCase()))
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter
@@ -138,7 +137,6 @@ export function TaskList({ tasks }: TaskListProps) {
   }, [activeTasks, settings.groupBy])
 
   const renderKanban = (taskList: Task[]) => {
-    // Determine which extra columns have tasks
     const allStatuses = Object.keys(STATUS_CONFIG) as TaskStatus[]
     const extraStatuses = allStatuses.filter(
       s => !KANBAN_BASE.includes(s) && taskList.some(t => t.status === s)
@@ -152,7 +150,7 @@ export function TaskList({ tasks }: TaskListProps) {
           const statusTasks = taskList.filter(t => t.status === status)
           if (statusFilter !== 'all' && status !== statusFilter) return null
           return (
-            <div key={status} className="flex-shrink-0 w-72">
+            <div key={status} className="flex-shrink-0 w-64">
               <div className={cn('rounded-t-lg px-3 py-2', config.bgColor)}>
                 <h3 className={cn('font-medium text-sm', config.color)}>
                   {config.label} ({statusTasks.length})
@@ -160,7 +158,7 @@ export function TaskList({ tasks }: TaskListProps) {
               </div>
               <div className="bg-muted/30 rounded-b-lg p-2 min-h-[200px] space-y-2">
                 {statusTasks.map(task => (
-                  <TaskCard key={task.id} task={task} compact />
+                  <TaskCard key={task.id} task={task} kanban />
                 ))}
                 {statusTasks.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">Nessun task</p>
@@ -181,7 +179,6 @@ export function TaskList({ tasks }: TaskListProps) {
         </div>
       )
     }
-    // Cards view (grid)
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
@@ -312,9 +309,7 @@ export function TaskList({ tasks }: TaskListProps) {
                   <span className="text-muted-foreground">({completedTasks.length})</span>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                {renderTasks(completedTasks)}
-              </CollapsibleContent>
+              <CollapsibleContent className="mt-2">{renderTasks(completedTasks)}</CollapsibleContent>
             </Collapsible>
           )}
 
@@ -327,9 +322,7 @@ export function TaskList({ tasks }: TaskListProps) {
                   <span className="text-muted-foreground">({cancelledTasks.length})</span>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                {renderTasks(cancelledTasks)}
-              </CollapsibleContent>
+              <CollapsibleContent className="mt-2">{renderTasks(cancelledTasks)}</CollapsibleContent>
             </Collapsible>
           )}
         </div>
