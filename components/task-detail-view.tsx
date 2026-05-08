@@ -22,7 +22,8 @@ import {
 import { PencilIcon, TrashIcon, Ban, Check, X, MoreHorizontalIcon, ExternalLink } from 'lucide-react'
 import { deleteTask, updateTask, updateTaskStatus } from '@/lib/actions'
 import { TaskWorkflowStepper } from './task-workflow-stepper'
-import { STATUS_CONFIG, PRIORITY_CONFIG, type Task, type TaskPriority, type TaskStatus } from '@/lib/types'
+import { LabelCombobox } from './label-combobox'
+import { STATUS_CONFIG, PRIORITY_CONFIG, isBugLabel, type Task, type TaskPriority, type TaskStatus } from '@/lib/types'
 import { getDueDateStatus, formatDateWithStatus, formatDate } from '@/lib/due-date-utils'
 import { cn } from '@/lib/utils'
 
@@ -45,7 +46,6 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
   const [saving, startSaving] = useTransition()
   const [deleting, setDeleting] = useState(false)
 
-  // Editable fields
   const [title, setTitle] = useState(task.title)
   const [priority, setPriority] = useState<TaskPriority>(task.priority as TaskPriority)
   const [status, setStatus] = useState<TaskStatus>(task.status as TaskStatus)
@@ -62,6 +62,9 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
   const dueDateStatus = getDueDateStatus(task.due_date, task.status)
   const priorityConfig = PRIORITY_CONFIG[task.priority as TaskPriority]
 
+  // Show Jira section if current saved label is Bug OR if editing and current draft label is Bug
+  const showJira = isBugLabel(editing ? label : task.label)
+
   const handleSave = () => {
     if (!title.trim()) return
     startSaving(async () => {
@@ -73,10 +76,10 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
         label: label.trim() || null,
         due_date: dueDate || null,
         note: note.trim() || null,
-        jira_url: jiraUrl.trim() || null,
-        jira_key: jiraKey.trim() || null,
-        code: code.trim() || null,
-        info: info.trim() || null,
+        jira_url: showJira ? (jiraUrl.trim() || null) : null,
+        jira_key: showJira ? (jiraKey.trim() || null) : null,
+        code: showJira ? (code.trim() || null) : null,
+        info: showJira ? (info.trim() || null) : null,
       })
       setEditing(false)
       router.refresh()
@@ -84,7 +87,6 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
   }
 
   const handleCancel = () => {
-    // Reset to original values
     setTitle(task.title)
     setPriority(task.priority as TaskPriority)
     setStatus(task.status as TaskStatus)
@@ -114,7 +116,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header row: title + actions */}
+      {/* Header: title + actions */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           {editing ? (
@@ -138,7 +140,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
           </p>
         </div>
 
-        {/* Action buttons top-right */}
+        {/* Actions top-right */}
         <div className="flex items-center gap-2 shrink-0">
           {editing ? (
             <>
@@ -157,7 +159,6 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
               Modifica
             </Button>
           )}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -183,7 +184,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
         <TaskWorkflowStepper task={task} />
       </div>
 
-      {/* Main fields — CRM style */}
+      {/* Dettagli */}
       <div className="border rounded-lg divide-y overflow-hidden">
         <div className="px-4 py-3 bg-muted/30">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dettagli</h2>
@@ -192,9 +193,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
           <Field label="Stato">
             {editing ? (
               <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger className="h-8 w-48">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-8 w-48"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                     <SelectItem key={key} value={key}>{config.label}</SelectItem>
@@ -215,9 +214,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
           <Field label="Priorità">
             {editing ? (
               <Select value={priority.toString()} onValueChange={(v) => setPriority(Number(v) as TaskPriority)}>
-                <SelectTrigger className="h-8 w-40">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
                     <SelectItem key={key} value={key}>{config.label}</SelectItem>
@@ -237,25 +234,19 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
 
           <Field label="Etichetta">
             {editing ? (
-              <Input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                className="h-8 w-48"
-                placeholder="es. FASE 2"
-              />
+              <LabelCombobox value={label} onChange={setLabel} className="w-48" />
+            ) : task.label ? (
+              <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-700">
+                {task.label}
+              </span>
             ) : (
-              <span className="text-foreground">{task.label || <span className="text-muted-foreground">—</span>}</span>
+              <span className="text-muted-foreground">—</span>
             )}
           </Field>
 
           <Field label="Scadenza">
             {editing ? (
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="h-8 w-48"
-              />
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-8 w-48" />
             ) : task.due_date ? (
               <span className={cn(
                 'font-medium',
@@ -271,12 +262,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
 
           <Field label="Note">
             {editing ? (
-              <Textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="min-h-[80px] resize-y"
-                placeholder="Note aggiuntive..."
-              />
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-[80px] resize-y" placeholder="Note aggiuntive..." />
             ) : task.note ? (
               <p className="whitespace-pre-wrap leading-relaxed">{task.note}</p>
             ) : (
@@ -286,81 +272,61 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
         </dl>
       </div>
 
-      {/* Jira / Bug Tracking */}
-      <div className="border rounded-lg divide-y overflow-hidden">
-        <div className="px-4 py-3 bg-muted/30">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Jira / Bug Tracking</h2>
+      {/* Jira / Bug Tracking — visibile solo se etichetta = Bug */}
+      {showJira && (
+        <div className="border border-red-200 rounded-lg divide-y overflow-hidden">
+          <div className="px-4 py-3 bg-red-50">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-red-700 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              Bug / Jira Tracking
+            </h2>
+          </div>
+          <dl className="px-4">
+            <Field label="Jira Key">
+              {editing ? (
+                <Input value={jiraKey} onChange={(e) => setJiraKey(e.target.value)} className="h-8 w-48 font-mono" placeholder="es. PROJ-123" />
+              ) : task.jira_key ? (
+                <span className="font-mono bg-muted/40 px-2 py-0.5 rounded text-xs">{task.jira_key}</span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </Field>
+
+            <Field label="Jira Link">
+              {editing ? (
+                <Input value={jiraUrl} onChange={(e) => setJiraUrl(e.target.value)} className="h-8" placeholder="https://jira..." type="url" />
+              ) : task.jira_url ? (
+                <a href={task.jira_url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 underline underline-offset-2">
+                  Apri Jira <ExternalLink className="size-3.5" />
+                </a>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </Field>
+
+            <Field label="Codice / Commit">
+              {editing ? (
+                <Input value={code} onChange={(e) => setCode(e.target.value)} className="h-8 font-mono" placeholder="es. abc1234" />
+              ) : task.code ? (
+                <span className="font-mono bg-muted/40 px-2 py-0.5 rounded text-xs break-all">{task.code}</span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </Field>
+
+            <Field label="Info aggiuntive">
+              {editing ? (
+                <Textarea value={info} onChange={(e) => setInfo(e.target.value)} className="min-h-[80px] resize-y" placeholder="Stack trace, note tecniche..." />
+              ) : task.info ? (
+                <p className="whitespace-pre-wrap leading-relaxed bg-muted/30 p-2 rounded text-xs">{task.info}</p>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </Field>
+          </dl>
         </div>
-        <dl className="px-4">
-          <Field label="Jira Key">
-            {editing ? (
-              <Input
-                value={jiraKey}
-                onChange={(e) => setJiraKey(e.target.value)}
-                className="h-8 w-48 font-mono"
-                placeholder="es. PROJ-123"
-              />
-            ) : task.jira_key ? (
-              <span className="font-mono bg-muted/40 px-2 py-0.5 rounded text-xs">{task.jira_key}</span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </Field>
-
-          <Field label="Jira Link">
-            {editing ? (
-              <Input
-                value={jiraUrl}
-                onChange={(e) => setJiraUrl(e.target.value)}
-                className="h-8"
-                placeholder="https://jira..."
-                type="url"
-              />
-            ) : task.jira_url ? (
-              <a
-                href={task.jira_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 underline underline-offset-2"
-              >
-                Apri Jira <ExternalLink className="size-3.5" />
-              </a>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </Field>
-
-          <Field label="Codice / Commit">
-            {editing ? (
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="h-8 font-mono"
-                placeholder="es. abc1234"
-              />
-            ) : task.code ? (
-              <span className="font-mono bg-muted/40 px-2 py-0.5 rounded text-xs break-all">{task.code}</span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </Field>
-
-          <Field label="Info aggiuntive">
-            {editing ? (
-              <Textarea
-                value={info}
-                onChange={(e) => setInfo(e.target.value)}
-                className="min-h-[80px] resize-y"
-                placeholder="Stack trace, note tecniche..."
-              />
-            ) : task.info ? (
-              <p className="whitespace-pre-wrap leading-relaxed bg-muted/30 p-2 rounded text-xs">{task.info}</p>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </Field>
-        </dl>
-      </div>
+      )}
     </div>
   )
 }

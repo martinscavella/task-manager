@@ -60,6 +60,21 @@ export const WORKFLOW_STEPS: TaskStatus[] = [
   'COMPLETED',
 ]
 
+/** Etichette predefinite. Ulteriori etichette aggiunte dall'utente vengono salvate in localStorage. */
+export const PREDEFINED_LABELS: string[] = [
+  'Bug',
+  'Feature',
+  'Miglioramento',
+  'Refactor',
+  'Documentazione',
+  'DevOps',
+]
+
+/** Restituisce true se l'etichetta è di tipo Bug (case-insensitive) */
+export function isBugLabel(label: string | null | undefined): boolean {
+  return label?.trim().toLowerCase() === 'bug'
+}
+
 export type ViewMode = 'list' | 'board' | 'grid'
 export type GroupBy = 'none' | 'status' | 'priority' | 'label'
 export type SortBy = 'created_at' | 'due_date' | 'priority' | 'title'
