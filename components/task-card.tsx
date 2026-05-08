@@ -36,31 +36,25 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
     setDeleting(false)
   }
 
-  const handleNextStatus = async () => {
+  const handleNextStatus = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     const currentIndex = WORKFLOW_STEPS.indexOf(task.status)
     if (currentIndex < WORKFLOW_STEPS.length - 1) {
       await updateTaskStatus(task.id, WORKFLOW_STEPS[currentIndex + 1])
     }
   }
 
-  const handlePrevStatus = async () => {
+  const handlePrevStatus = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     const currentIndex = WORKFLOW_STEPS.indexOf(task.status)
     if (currentIndex > 0) {
       await updateTaskStatus(task.id, WORKFLOW_STEPS[currentIndex - 1])
     }
   }
 
-  const handleSetBlocked = async () => {
-    await updateTaskStatus(task.id, 'BLOCKED')
-  }
-
-  const handleSetCancelled = async () => {
-    await updateTaskStatus(task.id, 'CANCELLED')
-  }
-
-  const handleCardClick = () => {
-    router.push(`/tasks/${task.id}`)
-  }
+  const handleSetBlocked = async () => { await updateTaskStatus(task.id, 'BLOCKED') }
+  const handleSetCancelled = async () => { await updateTaskStatus(task.id, 'CANCELLED') }
+  const handleCardClick = () => { router.push(`/tasks/${task.id}`) }
 
   const isCompleted = task.status === 'COMPLETED'
   const isCancelled = task.status === 'CANCELLED'
@@ -74,46 +68,52 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
   const canGoNext = currentStepIndex >= 0 && currentStepIndex < WORKFLOW_STEPS.length - 1
   const canGoPrev = currentStepIndex > 0
 
+  // ── COMPACT (list view) ──────────────────────────────────────────────
   if (compact) {
     return (
       <>
         <div
           onClick={handleCardClick}
           className={cn(
-            'flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:shadow-sm cursor-pointer hover:bg-card/80',
+            'flex items-center gap-2 rounded-lg border bg-card px-3 py-2.5 transition-all hover:shadow-sm cursor-pointer hover:bg-card/80',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
-          )}>
-          {/* Quick status navigation */}
-          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          )}
+        >
+          {/* Prev/Next arrows + stepper — isolated from card click */}
+          <div
+            className="flex items-center gap-1 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
-              variant="ghost"
-              size="icon-sm"
+              variant="ghost" size="icon-sm"
               onClick={handlePrevStatus}
               disabled={!canGoPrev}
-              className="h-6 w-6"
+              className="h-6 w-6 shrink-0"
             >
               <ChevronLeft className="h-3 w-3" />
             </Button>
-            <div className="shrink-0">
+
+            {/* Stepper: no overflow, no portal tooltips */}
+            <div className="shrink-0 max-w-[280px] overflow-hidden">
               <TaskWorkflowStepper task={task} />
             </div>
+
             <Button
-              variant="ghost"
-              size="icon-sm"
+              variant="ghost" size="icon-sm"
               onClick={handleNextStatus}
               disabled={!canGoNext}
-              className="h-6 w-6"
+              className="h-6 w-6 shrink-0"
             >
               <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
 
-          {/* Title and badges */}
+          {/* Title + badges */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
-                'font-medium truncate',
+                'font-medium truncate text-sm',
                 (isCompleted || isCancelled) && 'line-through text-muted-foreground'
               )}>
                 {task.title}
@@ -122,9 +122,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
                 {priorityConfig.label}
               </Badge>
               {task.label && (
-                <Badge variant="outline" className="text-xs shrink-0">
-                  {task.label}
-                </Badge>
+                <Badge variant="outline" className="text-xs shrink-0">{task.label}</Badge>
               )}
             </div>
           </div>
@@ -141,7 +139,7 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
             </span>
           )}
 
-          {/* Actions */}
+          {/* Actions menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon-sm" className="h-6 w-6 shrink-0">
@@ -150,30 +148,25 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                <PencilIcon className="size-4" />
-                Modifica
+                <PencilIcon className="size-4" />Modifica
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleSetBlocked}>
-                <Ban className="size-4" />
-                Blocca
+                <Ban className="size-4" />Blocca
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>
-                Annulla Task
-              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>Annulla Task</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={handleDelete} disabled={deleting}>
-                <TrashIcon className="size-4" />
-                {deleting ? 'Eliminazione...' : 'Elimina'}
+                <TrashIcon className="size-4" />{deleting ? 'Eliminazione...' : 'Elimina'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
         <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
       </>
     )
   }
 
+  // ── GRID / CARDS view ────────────────────────────────────────────────
   return (
     <>
       <div
@@ -182,9 +175,11 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
           'group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
           (isCompleted || isCancelled) && 'opacity-60',
           isBlocked && 'border-red-200 bg-red-50/50'
-        )}>
-        <div className="flex items-start justify-between gap-4">
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
+            {/* Title */}
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className={cn(
                 'font-medium text-foreground',
@@ -192,13 +187,10 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
               )}>
                 {task.title}
               </h3>
-              {task.label && (
-                <Badge variant="outline" className="text-xs">
-                  {task.label}
-                </Badge>
-              )}
+              {task.label && <Badge variant="outline" className="text-xs">{task.label}</Badge>}
             </div>
 
+            {/* Badges row */}
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <Badge className={cn(priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
@@ -217,68 +209,59 @@ export function TaskCard({ task, compact = false }: TaskCardProps) {
             </div>
 
             {task.note && (
-              <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                {task.note}
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{task.note}</p>
             )}
 
-            {/* Workflow stepper */}
-            <div className="mt-4 flex items-center gap-2 overflow-x-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Stepper row — isolated from card click */}
+            <div
+              className="mt-3 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 onClick={handlePrevStatus}
                 disabled={!canGoPrev}
                 className="h-7 shrink-0"
               >
-                <ChevronLeft className="h-3 w-3 mr-1" />
-                Indietro
+                <ChevronLeft className="h-3 w-3 mr-1" />Indietro
               </Button>
-              <div className="min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden">
                 <TaskWorkflowStepper task={task} />
               </div>
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 onClick={handleNextStatus}
                 disabled={!canGoNext}
                 className="h-7 shrink-0"
               >
-                Avanti
-                <ChevronRight className="h-3 w-3 ml-1" />
+                Avanti<ChevronRight className="h-3 w-3 ml-1" />
               </Button>
             </div>
           </div>
 
+          {/* Actions menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon-sm">
                 <MoreHorizontalIcon className="size-4" />
-                <span className="sr-only">Altre opzioni</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                <PencilIcon className="size-4" />
-                Modifica
+                <PencilIcon className="size-4" />Modifica
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleSetBlocked}>
-                <Ban className="size-4" />
-                Blocca
+                <Ban className="size-4" />Blocca
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>
-                Annulla Task
-              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>Annulla Task</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={handleDelete} disabled={deleting}>
-                <TrashIcon className="size-4" />
-                {deleting ? 'Eliminazione...' : 'Elimina'}
+                <TrashIcon className="size-4" />{deleting ? 'Eliminazione...' : 'Elimina'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-
       <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
     </>
   )
