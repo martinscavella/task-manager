@@ -16,26 +16,22 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/types'
 
-// ─── Widget registry ────────────────────────────────────────────────────────
-
 const WIDGET_META: Record<string, { label: string; icon: React.ElementType; wide?: boolean }> = {
-  stats:           { label: 'Statistiche generali',    icon: BarChart3 },
-  overdue:         { label: 'Task scaduti',            icon: AlertCircle },
-  recent:          { label: 'Task recenti',            icon: Clock },
-  completed_week:  { label: 'Completati (settimana)',  icon: CheckCircle2 },
-  due_today:       { label: 'In scadenza oggi',        icon: CalendarClock },
-  by_status:       { label: 'Per stato',              icon: Activity },
-  by_priority:     { label: 'Per priorità',           icon: Flame },
-  by_label:        { label: 'Per etichetta',          icon: Tag },
-  streak:          { label: 'Streak produttività',    icon: Star },
-  weekly_chart:    { label: 'Carico settimanale',     icon: BarChart3, wide: true },
-  next_due:        { label: 'Prossima scadenza',      icon: CalendarClock },
-  quick_actions:   { label: 'Quick Actions',          icon: Zap },
+  stats:           { label: 'Statistiche generali',   icon: BarChart3 },
+  overdue:         { label: 'Task scaduti',           icon: AlertCircle },
+  recent:          { label: 'Task recenti',           icon: Clock },
+  completed_week:  { label: 'Completati (settimana)', icon: CheckCircle2 },
+  due_today:       { label: 'In scadenza oggi',       icon: CalendarClock },
+  by_status:       { label: 'Per stato',             icon: Activity },
+  by_priority:     { label: 'Per priorità',          icon: Flame },
+  by_label:        { label: 'Per etichetta',         icon: Tag },
+  streak:          { label: 'Streak produttività',   icon: Star },
+  weekly_chart:    { label: 'Carico settimanale',    icon: BarChart3, wide: true },
+  next_due:        { label: 'Prossima scadenza',     icon: CalendarClock },
+  quick_actions:   { label: 'Quick Actions',         icon: Zap },
 }
 
 const DEFAULT_WIDGETS = ['stats', 'overdue', 'recent', 'completed_week']
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function todayStart() {
   const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -67,8 +63,6 @@ function last7Days(): string[] {
   })
 }
 
-// ─── Mini bar chart (no dependency) ─────────────────────────────────────────
-
 function MiniBar({ value, max, color = 'bg-primary' }: { value: number; max: number; color?: string }) {
   const pct = max === 0 ? 0 : Math.round((value / max) * 100)
   return (
@@ -79,8 +73,6 @@ function MiniBar({ value, max, color = 'bg-primary' }: { value: number; max: num
     </div>
   )
 }
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 interface Props {
   tasks: Task[]
@@ -95,7 +87,6 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
   const [saving, setSaving] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
-  // Quick task
   const [quickTitle, setQuickTitle] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -114,19 +105,14 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
   const completedWeek = tasks.filter(t => t.completed_at && new Date(t.completed_at) >= weekAgo)
   const streak = computeStreak(tasks)
 
-  // By status (only active statuses with tasks)
   const byStatus = Object.entries(
     activeTasks.reduce<Record<string, number>>((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc }, {})
   ).sort((a, b) => b[1] - a[1])
 
-  // By priority
   const byPriority = ([1, 2, 3, 4] as TaskPriority[]).map(p => ({
-    p,
-    count: activeTasks.filter(t => t.priority === p).length,
-    cfg: PRIORITY_CONFIG[p],
+    p, count: activeTasks.filter(t => t.priority === p).length, cfg: PRIORITY_CONFIG[p],
   })).filter(x => x.count > 0)
 
-  // By label
   const byLabel = Object.entries(
     tasks.reduce<Record<string, number>>((acc, t) => {
       const l = t.label || 'Nessuna'
@@ -134,7 +120,6 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
     }, {})
   ).sort((a, b) => b[1] - a[1]).slice(0, 6)
 
-  // Weekly chart
   const days7 = last7Days()
   const weeklyData = days7.map(day => ({
     day: new Date(day).toLocaleDateString('it-IT', { weekday: 'short' }),
@@ -142,12 +127,9 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
   }))
   const weeklyMax = Math.max(...weeklyData.map(d => d.count), 1)
 
-  // Next due
   const nextDue = [...activeTasks]
     .filter(t => t.due_date)
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())[0]
-
-  // ─── Edit mode handlers ───────────────────────────────────────────────────
 
   const handleSave = async () => {
     setSaving(true)
@@ -171,8 +153,6 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
   const addWidget = (id: string) => setWidgets(w => [...w, id])
   const hiddenWidgets = Object.keys(WIDGET_META).filter(id => !widgets.includes(id))
 
-  // ─── Quick actions ────────────────────────────────────────────────────────
-
   const handleQuickCreate = () => {
     if (!quickTitle.trim()) return
     startTransition(async () => {
@@ -182,11 +162,8 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
     })
   }
 
-  // ─── Widget content renderer ──────────────────────────────────────────────
-
   const renderWidget = (id: string) => {
     switch (id) {
-
       case 'stats':
         return (
           <div className="grid grid-cols-2 gap-3">
@@ -203,22 +180,20 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
             ))}
           </div>
         )
-
       case 'overdue':
         return overdueTasks.length === 0
           ? <p className="text-sm text-muted-foreground">Nessun task scaduto 🎉</p>
           : <ul className="space-y-1.5">
             {overdueTasks.slice(0, 5).map(t => (
-              <li key={t.id} className="flex items-center gap-2 text-sm">
+              <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
                 <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
-                <span className="truncate text-red-600 font-medium">{t.title}</span>
+                <span className="truncate text-red-600 font-medium flex-1 min-w-0">{t.title}</span>
                 <span className="ml-auto text-xs text-muted-foreground shrink-0">
                   {new Date(t.due_date!).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                 </span>
               </li>
             ))}
           </ul>
-
       case 'recent':
         return recentTasks.length === 0
           ? <p className="text-sm text-muted-foreground">Nessun task</p>
@@ -226,15 +201,14 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
             {recentTasks.map(t => {
               const pc = PRIORITY_CONFIG[t.priority as TaskPriority]
               return (
-                <li key={t.id} className="flex items-center gap-2 text-sm">
+                <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
                   <span className={cn('size-1.5 rounded-full shrink-0', pc?.bgColor.split(' ')[0])} />
-                  <span className="truncate">{t.title}</span>
+                  <span className="truncate flex-1 min-w-0">{t.title}</span>
                   <span className="ml-auto text-xs text-muted-foreground shrink-0">{STATUS_CONFIG[t.status]?.label}</span>
                 </li>
               )
             })}
           </ul>
-
       case 'completed_week':
         return (
           <div>
@@ -250,22 +224,20 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
             )}
           </div>
         )
-
       case 'due_today':
         return dueTodayTasks.length === 0
           ? <p className="text-sm text-muted-foreground">Nessun task in scadenza oggi ✅</p>
           : <ul className="space-y-1.5">
             {dueTodayTasks.map(t => (
-              <li key={t.id} className="flex items-center gap-2 text-sm">
+              <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
                 <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
-                <span className="truncate font-medium text-amber-700">{t.title}</span>
+                <span className="truncate font-medium text-amber-700 flex-1 min-w-0">{t.title}</span>
                 <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded-full shrink-0', STATUS_CONFIG[t.status]?.bgColor, STATUS_CONFIG[t.status]?.color)}>
                   {STATUS_CONFIG[t.status]?.label}
                 </span>
               </li>
             ))}
           </ul>
-
       case 'by_status':
         return byStatus.length === 0
           ? <p className="text-sm text-muted-foreground">Nessun task attivo</p>
@@ -286,7 +258,6 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
               )
             })}
           </ul>
-
       case 'by_priority':
         return byPriority.length === 0
           ? <p className="text-sm text-muted-foreground">Nessun task attivo</p>
@@ -306,19 +277,16 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
               )
             })}
           </ul>
-
       case 'by_label':
         return byLabel.length === 0
           ? <p className="text-sm text-muted-foreground">Nessuna etichetta</p>
           : <div className="flex flex-wrap gap-1.5">
             {byLabel.map(([label, count]) => (
               <span key={label} className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-full">
-                {label}
-                <span className="font-bold text-foreground">{count}</span>
+                {label}<span className="font-bold text-foreground">{count}</span>
               </span>
             ))}
           </div>
-
       case 'streak':
         return (
           <div>
@@ -329,12 +297,10 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
             <p className="text-xs text-muted-foreground mt-1">
               {streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
                streak < 3 ? 'Buon inizio, continua così!' :
-               streak < 7 ? 'Stai andando forte! 💪' :
-               'Sei inarrestabile! 🚀'}
+               streak < 7 ? 'Stai andando forte! 💪' : 'Sei inarrestabile! 🚀'}
             </p>
           </div>
         )
-
       case 'weekly_chart':
         return (
           <div>
@@ -354,7 +320,6 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
             <p className="text-xs text-muted-foreground mt-2">Task completati per giorno (ultimi 7gg)</p>
           </div>
         )
-
       case 'next_due':
         return !nextDue
           ? <p className="text-sm text-muted-foreground">Nessun task con scadenza</p>
@@ -376,15 +341,10 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
               </p>
             </div>
           )
-
       case 'quick_actions':
         return (
           <div className="space-y-3">
-            {/* Crea task rapido */}
-            <form
-              onSubmit={e => { e.preventDefault(); handleQuickCreate() }}
-              className="flex gap-2"
-            >
+            <form onSubmit={e => { e.preventDefault(); handleQuickCreate() }} className="flex gap-2">
               <Input
                 value={quickTitle}
                 onChange={e => setQuickTitle(e.target.value)}
@@ -396,7 +356,6 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
                 <Plus className="size-3.5" />
               </Button>
             </form>
-            {/* Azioni rapide */}
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Tutti i task', href: '/?tab=tasks', icon: ArrowRight },
@@ -404,46 +363,31 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
                 { label: 'Impostazioni', href: '/settings', icon: Star },
                 { label: 'Profilo', href: '/settings', icon: Star },
               ].map(({ label, href, icon: Icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border bg-muted/30 hover:bg-muted transition-colors"
-                >
-                  <Icon className="size-3 text-muted-foreground" />
-                  {label}
+                <a key={label} href={href} className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border bg-muted/30 hover:bg-muted transition-colors">
+                  <Icon className="size-3 text-muted-foreground" />{label}
                 </a>
               ))}
             </div>
           </div>
         )
-
       default:
         return null
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
-
   return (
     <div className="space-y-4">
-
-      {/* Edit mode: widget nascosti da aggiungere */}
       {editMode && hiddenWidgets.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-muted/40 border border-dashed">
           <span className="text-xs font-medium text-muted-foreground">Aggiungi widget:</span>
           {hiddenWidgets.map(id => (
-            <button
-              key={id}
-              onClick={() => addWidget(id)}
-              className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-muted transition-colors flex items-center gap-1"
-            >
+            <button key={id} onClick={() => addWidget(id)} className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-muted transition-colors flex items-center gap-1">
               <Plus className="size-3" /> {WIDGET_META[id]?.label}
             </button>
           ))}
         </div>
       )}
 
-      {/* Griglia widget */}
       <div className="grid sm:grid-cols-2 gap-4">
         {widgets.map((id, i) => {
           const meta = WIDGET_META[id]
@@ -456,44 +400,38 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
               onDragOver={e => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
               className={cn(
-                'border rounded-2xl p-5 bg-card shadow-sm transition-all',
+                'border rounded-2xl p-4 bg-card shadow-sm transition-all overflow-hidden',
                 meta.wide && 'sm:col-span-2',
                 editMode && 'cursor-grab active:cursor-grabbing ring-2 ring-border',
                 dragIdx === i && 'opacity-50'
               )}
             >
-              {/* Widget header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  {editMode && <GripVertical className="size-3.5 text-muted-foreground" />}
-                  <meta.icon className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{meta.label}</span>
+              <div className="flex items-center justify-between mb-4 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  {editMode && <GripVertical className="size-3.5 text-muted-foreground shrink-0" />}
+                  <meta.icon className="size-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium truncate">{meta.label}</span>
                 </div>
                 {editMode && (
-                  <button
-                    onClick={() => removeWidget(id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                    title="Rimuovi widget"
-                  >
+                  <button onClick={() => removeWidget(id)} className="text-muted-foreground hover:text-destructive transition-colors shrink-0 ml-2">
                     <EyeOff className="size-3.5" />
                   </button>
                 )}
               </div>
-
-              {/* Widget body */}
               {renderWidget(id)}
             </div>
           )
         })}
       </div>
 
-      {/* Footer */}
-      <div className="flex justify-end">
+      {/* "Personalizza" — su mobile sopra la bottom nav, lontano dal FAB */}
+      <div className="flex justify-end pb-2">
         <Button
           variant={editMode ? 'default' : 'outline'}
           size="sm"
           onClick={editMode ? handleSave : () => setEditMode(true)}
           disabled={saving}
+          className="md:mr-0 mr-16" // sposta a sinistra del FAB su mobile
         >
           {editMode
             ? (saving ? 'Salvataggio...' : 'Salva layout')

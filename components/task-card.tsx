@@ -26,13 +26,12 @@ interface TaskCardProps {
   kanban?: boolean
 }
 
-// Colore HEX del bordo superiore per priorità
 const PRIORITY_BORDER_COLOR: Record<number, string> = {
-  1: '#ef4444', // red-500
-  2: '#fb923c', // orange-400
-  3: '#facc15', // yellow-400
-  4: '#60a5fa', // blue-400
-  5: '#cbd5e1', // slate-300
+  1: '#ef4444',
+  2: '#fb923c',
+  3: '#facc15',
+  4: '#60a5fa',
+  5: '#cbd5e1',
 }
 
 export function TaskCard({ task, compact = false, kanban = false }: TaskCardProps) {
@@ -58,15 +57,13 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   const priorityConfig = PRIORITY_CONFIG[task.priority as TaskPriority]
   const dueDateStatus = getDueDateStatus(task.due_date, task.status)
   const borderColor = PRIORITY_BORDER_COLOR[task.priority as number] ?? '#cbd5e1'
-
-  // border-t colorato via inline style — segue nativamente rounded-3xl
   const cardStyle = { borderTopColor: borderColor, borderTopWidth: '3px' }
 
   const actionsMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" size="icon-sm" className="h-6 w-6 shrink-0">
-          <MoreHorizontalIcon className="size-3" />
+        <Button variant="ghost" size="icon-sm" className="h-8 w-8 shrink-0">
+          <MoreHorizontalIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -93,28 +90,28 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
           onClick={handleCardClick}
           style={cardStyle}
           className={cn(
-            'rounded-3xl border bg-card p-3 shadow-sm cursor-pointer hover:shadow-md transition-all',
+            'rounded-2xl border bg-card p-3 shadow-sm cursor-pointer hover:shadow-md transition-all w-full',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2 min-w-0">
             <p className={cn(
-              'text-sm font-medium leading-snug flex-1 min-w-0',
+              'text-sm font-medium leading-snug flex-1 min-w-0 break-words',
               (isCompleted || isCancelled) && 'line-through text-muted-foreground'
             )}>
               {task.title}
             </p>
             {actionsMenu}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge className={cn('text-xs rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 min-w-0">
+            <Badge className={cn('text-xs rounded-full shrink-0', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
               {priorityConfig.label}
             </Badge>
-            {task.label && <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>}
+            {task.label && <Badge variant="outline" className="text-xs rounded-full shrink-0 max-w-[100px] truncate">{task.label}</Badge>}
             {task.due_date && (
               <span className={cn(
-                'text-xs font-medium',
+                'text-xs font-medium shrink-0',
                 dueDateStatus === 'overdue' && 'text-red-600',
                 dueDateStatus === 'due-today' && 'text-orange-600',
                 dueDateStatus === 'upcoming' && 'text-muted-foreground'
@@ -137,40 +134,49 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
           onClick={handleCardClick}
           style={cardStyle}
           className={cn(
-            'flex items-center gap-2 rounded-3xl border bg-card px-3 py-2.5',
+            'flex items-center gap-2 rounded-2xl border bg-card px-3 py-3 w-full overflow-hidden',
             'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/80',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          <div className="shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          {/* Stepper — non cresce */}
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
             <TaskWorkflowStepper task={task} />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={cn(
-                'font-medium truncate text-sm',
-                (isCompleted || isCancelled) && 'line-through text-muted-foreground'
-              )}>
-                {task.title}
-              </span>
+
+          {/* Contenuto centrale — cresce ma non sfora */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <p className={cn(
+              'font-medium text-sm truncate',
+              (isCompleted || isCancelled) && 'line-through text-muted-foreground'
+            )}>
+              {task.title}
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <Badge className={cn('text-xs shrink-0 rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
-              {task.label && <Badge variant="outline" className="text-xs shrink-0 rounded-full">{task.label}</Badge>}
+              {task.label && (
+                <Badge variant="outline" className="text-xs shrink-0 rounded-full max-w-[80px] truncate">
+                  {task.label}
+                </Badge>
+              )}
+              {task.due_date && (
+                <span className={cn(
+                  'text-xs font-medium shrink-0',
+                  dueDateStatus === 'overdue' && 'text-red-600',
+                  dueDateStatus === 'due-today' && 'text-orange-600',
+                  dueDateStatus === 'upcoming' && 'text-muted-foreground'
+                )}>
+                  {formatDateWithStatus(task.due_date, dueDateStatus)}
+                </span>
+              )}
             </div>
           </div>
-          {task.due_date && (
-            <span className={cn(
-              'text-xs shrink-0 font-medium',
-              dueDateStatus === 'overdue' && 'text-red-600',
-              dueDateStatus === 'due-today' && 'text-orange-600',
-              dueDateStatus === 'upcoming' && 'text-muted-foreground'
-            )}>
-              {formatDateWithStatus(task.due_date, dueDateStatus)}
-            </span>
-          )}
-          {actionsMenu}
+
+          {/* Menu — sempre a destra, non cresce */}
+          <div className="shrink-0">{actionsMenu}</div>
         </div>
         <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
       </>
@@ -184,31 +190,35 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
         onClick={handleCardClick}
         style={cardStyle}
         className={cn(
-          'group rounded-3xl border bg-card p-4',
+          'group rounded-2xl border bg-card p-4 w-full overflow-hidden',
           'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
           (isCompleted || isCancelled) && 'opacity-60',
           isBlocked && 'border-red-200 bg-red-50/50'
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-start justify-between gap-3 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
               <h3 className={cn(
-                'font-medium text-foreground',
+                'font-medium text-foreground truncate',
                 (isCompleted || isCancelled) && 'line-through text-muted-foreground'
               )}>
                 {task.title}
               </h3>
-              {task.label && <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>}
+              {task.label && (
+                <Badge variant="outline" className="text-xs rounded-full shrink-0 max-w-[100px] truncate">
+                  {task.label}
+                </Badge>
+              )}
             </div>
             <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <Badge className={cn('rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+              <Badge className={cn('rounded-full shrink-0', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
               <StepBadge variant="full" step={statusConfig.label} />
               {task.due_date && (
                 <span className={cn(
-                  'text-xs font-medium',
+                  'text-xs font-medium shrink-0',
                   dueDateStatus === 'overdue' && 'text-red-600',
                   dueDateStatus === 'due-today' && 'text-orange-600',
                   dueDateStatus === 'upcoming' && 'text-muted-foreground'
@@ -218,26 +228,28 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               )}
             </div>
             {task.note && (
-              <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{task.note}</p>
+              <p className="mt-2 text-sm text-muted-foreground line-clamp-2 break-words">{task.note}</p>
             )}
             <div className="mt-3 overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <TaskWorkflowStepper task={task} />
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon-sm"><MoreHorizontalIcon className="size-4" /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditOpen(true)}><PencilIcon className="size-4" />Modifica</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSetBlocked}><Ban className="size-4" />Blocca</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>Annulla Task</DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={handleDelete} disabled={deleting}>
-                <TrashIcon className="size-4" />{deleting ? 'Eliminazione...' : 'Elimina'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon-sm"><MoreHorizontalIcon className="size-4" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditOpen(true)}><PencilIcon className="size-4" />Modifica</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSetBlocked}><Ban className="size-4" />Blocca</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>Annulla Task</DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onClick={handleDelete} disabled={deleting}>
+                  <TrashIcon className="size-4" />{deleting ? 'Eliminazione...' : 'Elimina'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
       <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
