@@ -180,18 +180,32 @@ export function TaskList({ tasks }: TaskListProps) {
     )
   }
 
+  // Su mobile la lista usa sempre il layout nativo (mobileCard dentro TaskCard)
+  // Il viewMode su mobile influenza solo kanban vs lista
   const renderTasks = (taskList: Task[]) => {
     if (internalViewMode === 'list') {
       return (
-        <div className="space-y-2">
-          {taskList.map((task) => <TaskCard key={task.id} task={task} compact />)}
-        </div>
+        // Mobile: lista stile iOS con bordo card contenitore
+        <>
+          <div className="md:hidden rounded-2xl border bg-card overflow-hidden shadow-sm">
+            {taskList.map((task) => <TaskCard key={task.id} task={task} compact />)}
+          </div>
+          <div className="hidden md:block space-y-2">
+            {taskList.map((task) => <TaskCard key={task.id} task={task} compact />)}
+          </div>
+        </>
       )
     }
+    // Grid: su mobile colonna singola, desktop griglia
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
-      </div>
+      <>
+        <div className="md:hidden rounded-2xl border bg-card overflow-hidden shadow-sm">
+          {taskList.map((task) => <TaskCard key={task.id} task={task} compact />)}
+        </div>
+        <div className="hidden md:grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
+        </div>
+      </>
     )
   }
 
@@ -200,7 +214,7 @@ export function TaskList({ tasks }: TaskListProps) {
   return (
     <div className="space-y-4">
 
-      {/* ── Mobile toolbar ─────────────────────────────────────── */}
+      {/* Mobile toolbar */}
       <div className="flex gap-2 md:hidden">
         <div className="relative flex-1">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -211,7 +225,6 @@ export function TaskList({ tasks }: TaskListProps) {
             className="pl-9 h-10"
           />
         </div>
-        {/* Filtri */}
         <button
           onClick={() => setFilterSheetOpen(true)}
           className={cn(
@@ -226,10 +239,10 @@ export function TaskList({ tasks }: TaskListProps) {
             </span>
           )}
         </button>
-        {/* View mode */}
+        {/* View mode: solo list e kanban su mobile */}
         <div className="flex items-center border rounded-xl p-1 gap-0.5 shrink-0">
-          {(['list', 'grid', 'board'] as const).map((mode) => {
-            const Icon = mode === 'list' ? List : mode === 'grid' ? LayoutGrid : Kanban
+          {(['list', 'board'] as const).map((mode) => {
+            const Icon = mode === 'list' ? List : Kanban
             return (
               <button
                 key={mode}
@@ -246,7 +259,7 @@ export function TaskList({ tasks }: TaskListProps) {
         </div>
       </div>
 
-      {/* ── Desktop toolbar ─────────────────────────────────────── */}
+      {/* Desktop toolbar */}
       <div className="hidden md:flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="relative flex-1 max-w-sm">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -270,9 +283,9 @@ export function TaskList({ tasks }: TaskListProps) {
           </SelectContent>
         </Select>
         <Select value={priorityFilter === 'all' ? 'all' : priorityFilter.toString()} onValueChange={(v) => setFilterPriority(v === 'all' ? [] : [v])}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Priorità" /></SelectTrigger>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Priorit\u00e0" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutte le priorità</SelectItem>
+            <SelectItem value="all">Tutte le priorit\u00e0</SelectItem>
             {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
               <SelectItem key={key} value={key}>{config.label}</SelectItem>
             ))}
@@ -286,7 +299,7 @@ export function TaskList({ tasks }: TaskListProps) {
           <SelectContent>
             <SelectItem value="none">Nessun raggruppamento</SelectItem>
             <SelectItem value="status">Per stato</SelectItem>
-            <SelectItem value="priority">Per priorità</SelectItem>
+            <SelectItem value="priority">Per priorit\u00e0</SelectItem>
             <SelectItem value="label">Per etichetta</SelectItem>
           </SelectContent>
         </Select>
@@ -295,7 +308,7 @@ export function TaskList({ tasks }: TaskListProps) {
           <SelectContent>
             <SelectItem value="created_at">Data creazione</SelectItem>
             <SelectItem value="due_date">Data scadenza</SelectItem>
-            <SelectItem value="priority">Priorità</SelectItem>
+            <SelectItem value="priority">Priorit\u00e0</SelectItem>
             <SelectItem value="title">Nome</SelectItem>
           </SelectContent>
         </Select>
@@ -308,87 +321,62 @@ export function TaskList({ tasks }: TaskListProps) {
         </div>
       </div>
 
-      {/* ── Filter bottom sheet (mobile) ────────────────────────── */}
+      {/* Filter bottom sheet (mobile) */}
       {filterSheetOpen && (
         <div className="fixed inset-0 z-50 md:hidden" onClick={() => setFilterSheetOpen(false)}>
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
           <div
-            className="absolute bottom-0 inset-x-0 bg-background rounded-t-3xl border-t px-4 pt-4 pb-safe shadow-2xl"
+            className="absolute bottom-0 inset-x-0 bg-background rounded-t-3xl border-t px-4 pt-4 pb-8 shadow-2xl"
+            style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
             onClick={e => e.stopPropagation()}
           >
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
             <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
               <p className="text-sm font-semibold">Filtri</p>
-              <button onClick={() => setFilterSheetOpen(false)} className="text-muted-foreground">
-                <X className="size-5" />
-              </button>
+              <button onClick={() => setFilterSheetOpen(false)} className="text-muted-foreground"><X className="size-5" /></button>
             </div>
-            <div className="space-y-4 pb-2">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stato</p>
                 <div className="flex flex-wrap gap-2">
                   {[{ value: 'all', label: 'Tutti' }, ...Object.entries(STATUS_CONFIG).map(([k, v]) => ({ value: k, label: v.label }))].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setFilterStatus(value === 'all' ? [] : [value])}
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                    <button key={value} onClick={() => setFilterStatus(value === 'all' ? [] : [value])}
+                      className={cn('px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                         statusFilter === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
-                      )}
-                    >
-                      {label}
-                    </button>
+                      )}>{label}</button>
                   ))}
                 </div>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priorità</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priorit\u00e0</p>
                 <div className="flex flex-wrap gap-2">
                   {[{ value: 'all', label: 'Tutte' }, ...Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label }))].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setFilterPriority(value === 'all' ? [] : [value])}
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                    <button key={value} onClick={() => setFilterPriority(value === 'all' ? [] : [value])}
+                      className={cn('px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                         (priorityFilter === 'all' ? 'all' : priorityFilter.toString()) === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
-                      )}
-                    >
-                      {label}
-                    </button>
+                      )}>{label}</button>
                   ))}
                 </div>
               </div>
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Raggruppa per</p>
                 <div className="flex flex-wrap gap-2">
-                  {[{ value: 'none', label: 'Nessuno' }, { value: 'status', label: 'Stato' }, { value: 'priority', label: 'Priorità' }, { value: 'label', label: 'Etichetta' }].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setGroupBy(value as any)}
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                  {[{ value: 'none', label: 'Nessuno' }, { value: 'status', label: 'Stato' }, { value: 'priority', label: 'Priorit\u00e0' }, { value: 'label', label: 'Etichetta' }].map(({ value, label }) => (
+                    <button key={value} onClick={() => setGroupBy(value as any)}
+                      className={cn('px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                         settings.groupBy === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
-                      )}
-                    >
-                      {label}
-                    </button>
+                      )}>{label}</button>
                   ))}
                 </div>
               </div>
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ordina per</p>
                 <div className="flex flex-wrap gap-2">
-                  {[{ value: 'created_at', label: 'Data creazione' }, { value: 'due_date', label: 'Scadenza' }, { value: 'priority', label: 'Priorità' }, { value: 'title', label: 'Nome' }].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setSortBy(value as any)}
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                  {[{ value: 'created_at', label: 'Data creazione' }, { value: 'due_date', label: 'Scadenza' }, { value: 'priority', label: 'Priorit\u00e0' }, { value: 'title', label: 'Nome' }].map(({ value, label }) => (
+                    <button key={value} onClick={() => setSortBy(value as any)}
+                      className={cn('px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                         settings.sortBy === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
-                      )}
-                    >
-                      {label}
-                    </button>
+                      )}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -396,16 +384,16 @@ export function TaskList({ tasks }: TaskListProps) {
                 onClick={() => setFilterSheetOpen(false)}
                 className="w-full mt-2 rounded-xl bg-foreground text-background py-3 text-sm font-semibold"
               >
-                Applica filtri{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+                Applica{activeFiltersCount > 0 ? ` (${activeFiltersCount} attivi)` : ''}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Task content ────────────────────────────────────────── */}
+      {/* Task content */}
       {sortedAndFiltered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
+        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-2xl">
           <p className="text-lg font-medium">Nessun task trovato</p>
           <p className="text-sm mt-1">Prova a modificare i filtri o crea un nuovo task</p>
         </div>
@@ -424,7 +412,7 @@ export function TaskList({ tasks }: TaskListProps) {
                     <span className="text-muted-foreground">({groupTasks.length})</span>
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">{renderTasks(groupTasks)}</CollapsibleContent>
+                <CollapsibleContent className="mt-1">{renderTasks(groupTasks)}</CollapsibleContent>
               </Collapsible>
             ))
           }
@@ -437,7 +425,7 @@ export function TaskList({ tasks }: TaskListProps) {
                   <span className="text-muted-foreground">({completedTasks.length})</span>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">{renderTasks(completedTasks)}</CollapsibleContent>
+              <CollapsibleContent className="mt-1">{renderTasks(completedTasks)}</CollapsibleContent>
             </Collapsible>
           )}
           {cancelledTasks.length > 0 && (
@@ -449,7 +437,7 @@ export function TaskList({ tasks }: TaskListProps) {
                   <span className="text-muted-foreground">({cancelledTasks.length})</span>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">{renderTasks(cancelledTasks)}</CollapsibleContent>
+              <CollapsibleContent className="mt-1">{renderTasks(cancelledTasks)}</CollapsibleContent>
             </Collapsible>
           )}
         </div>

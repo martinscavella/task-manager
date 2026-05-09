@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontalIcon, PencilIcon, TrashIcon, Ban } from 'lucide-react'
+import { MoreHorizontalIcon, PencilIcon, TrashIcon, Ban, ChevronRight } from 'lucide-react'
 import { deleteTask, updateTaskStatus } from '@/lib/actions'
 import { EditTaskDialog } from './edit-task-dialog'
 import { TaskWorkflowStepper } from './task-workflow-stepper'
@@ -32,6 +32,14 @@ const PRIORITY_BORDER_COLOR: Record<number, string> = {
   3: '#facc15',
   4: '#60a5fa',
   5: '#cbd5e1',
+}
+
+const PRIORITY_DOT: Record<number, string> = {
+  1: 'bg-red-500',
+  2: 'bg-orange-400',
+  3: 'bg-yellow-400',
+  4: 'bg-blue-400',
+  5: 'bg-slate-300',
 }
 
 export function TaskCard({ task, compact = false, kanban = false }: TaskCardProps) {
@@ -57,6 +65,7 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   const priorityConfig = PRIORITY_CONFIG[task.priority as TaskPriority]
   const dueDateStatus = getDueDateStatus(task.due_date, task.status)
   const borderColor = PRIORITY_BORDER_COLOR[task.priority as number] ?? '#cbd5e1'
+  const dotColor = PRIORITY_DOT[task.priority as number] ?? 'bg-slate-300'
   const cardStyle = { borderTopColor: borderColor, borderTopWidth: '3px' }
 
   const actionsMenu = (
@@ -82,7 +91,64 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     </DropdownMenu>
   )
 
-  // ── KANBAN ────────────────────────────────────────────────────
+  // ── MOBILE LIST (compact su mobile) ─────────────────────────────────────────
+  // Layout a riga unica ottimizzato: dot priorità · titolo · stato badge · data · chevron
+  const mobileCard = (
+    <>
+      <div
+        onClick={handleCardClick}
+        className={cn(
+          'flex items-center gap-3 px-4 py-3.5 bg-card border-b last:border-b-0 cursor-pointer active:bg-muted/50 transition-colors',
+          (isCompleted || isCancelled) && 'opacity-50',
+        )}
+      >
+        {/* Dot priorità */}
+        <span className={cn('size-2 rounded-full shrink-0', dotColor)} />
+
+        {/* Titolo + info secondarie */}
+        <div className="flex-1 min-w-0">
+          <p className={cn(
+            'text-sm font-medium truncate leading-snug',
+            (isCompleted || isCancelled) && 'line-through text-muted-foreground'
+          )}>
+            {task.title}
+          </p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {/* Stato */}
+            <span className={cn(
+              'text-[11px] font-medium px-1.5 py-0.5 rounded-full',
+              statusConfig.bgColor, statusConfig.color
+            )}>
+              {statusConfig.label}
+            </span>
+            {/* Etichetta */}
+            {task.label && (
+              <span className="text-[11px] text-muted-foreground truncate max-w-[80px]">
+                {task.label}
+              </span>
+            )}
+            {/* Scadenza */}
+            {task.due_date && (
+              <span className={cn(
+                'text-[11px] font-medium ml-auto shrink-0',
+                dueDateStatus === 'overdue' && 'text-red-500',
+                dueDateStatus === 'due-today' && 'text-orange-500',
+                dueDateStatus === 'upcoming' && 'text-muted-foreground'
+              )}>
+                {formatDateWithStatus(task.due_date, dueDateStatus)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Menu azioni */}
+        <div onClick={e => e.stopPropagation()}>{actionsMenu}</div>
+      </div>
+      <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
+    </>
+  )
+
+  // ── KANBAN ───────────────────────────────────────────────────────────────────
   if (kanban) {
     return (
       <>
@@ -90,7 +156,7 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
           onClick={handleCardClick}
           style={cardStyle}
           className={cn(
-            'rounded-2xl border bg-card p-3 shadow-sm cursor-pointer hover:shadow-md transition-all w-full',
+            'rounded-2xl border bg-card p-3 shadow-sm cursor-pointer hover:shadow-md transition-all w-full overflow-hidden',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
@@ -126,26 +192,27 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── COMPACT ───────────────────────────────────────────────────
+  // ── COMPACT (desktop list) — mobile usa mobileCard sopra ─────────────────────
   if (compact) {
     return (
       <>
+        {/* Mobile: lista nativa stile iOS */}
+        <div className="md:hidden">{mobileCard}</div>
+
+        {/* Desktop: card con stepper */}
         <div
           onClick={handleCardClick}
           style={cardStyle}
           className={cn(
-            'flex items-center gap-2 rounded-2xl border bg-card px-3 py-3 w-full overflow-hidden',
+            'hidden md:flex items-center gap-2 rounded-2xl border bg-card px-3 py-3 w-full overflow-hidden',
             'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/80',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          {/* Stepper — non cresce */}
           <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
             <TaskWorkflowStepper task={task} />
           </div>
-
-          {/* Contenuto centrale — cresce ma non sfora */}
           <div className="flex-1 min-w-0 overflow-hidden">
             <p className={cn(
               'font-medium text-sm truncate',
@@ -158,9 +225,7 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
                 {priorityConfig.label}
               </Badge>
               {task.label && (
-                <Badge variant="outline" className="text-xs shrink-0 rounded-full max-w-[80px] truncate">
-                  {task.label}
-                </Badge>
+                <Badge variant="outline" className="text-xs shrink-0 rounded-full max-w-[80px] truncate">{task.label}</Badge>
               )}
               {task.due_date && (
                 <span className={cn(
@@ -174,8 +239,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               )}
             </div>
           </div>
-
-          {/* Menu — sempre a destra, non cresce */}
           <div className="shrink-0">{actionsMenu}</div>
         </div>
         <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
@@ -183,14 +246,18 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── GRID / CARDS ──────────────────────────────────────────────
+  // ── GRID / CARDS (desktop) — mobile usa mobileCard ───────────────────────────
   return (
     <>
+      {/* Mobile */}
+      <div className="md:hidden">{mobileCard}</div>
+
+      {/* Desktop */}
       <div
         onClick={handleCardClick}
         style={cardStyle}
         className={cn(
-          'group rounded-2xl border bg-card p-4 w-full overflow-hidden',
+          'hidden md:block group rounded-2xl border bg-card p-4 w-full overflow-hidden',
           'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
           (isCompleted || isCancelled) && 'opacity-60',
           isBlocked && 'border-red-200 bg-red-50/50'
