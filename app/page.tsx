@@ -1,4 +1,4 @@
-import { getTasks, getTaskAnalytics, signOut } from '@/lib/actions'
+import { getTasks, getTaskAnalytics } from '@/lib/actions'
 import { getProfile, getPreferences } from '@/lib/profile-actions'
 import { TaskList } from '@/components/task-list'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
@@ -7,6 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BarChart3, ListTodo, LayoutDashboard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { UserMenuButton } from '@/components/user-menu-button'
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buongiorno'
+  if (h < 18) return 'Buon pomeriggio'
+  return 'Buonasera'
+}
 
 export default async function Home() {
   const supabase = await createClient()
@@ -19,16 +26,23 @@ export default async function Home() {
     getPreferences(),
   ])
 
-  const fullName = profile?.full_name || user?.user_metadata?.full_name as string | undefined
-  const displayName = fullName || user?.email?.split('@')[0] || 'Utente'
+  const firstName = profile?.first_name || (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] || user?.email?.split('@')[0] || 'Ciao'
+  const lastName = profile?.last_name ?? ''
+  const displayName = [firstName, lastName].filter(Boolean).join(' ')
 
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
+
+        {/* Header con saluto */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Task Manager</h1>
-            <p className="text-muted-foreground mt-1">Gestisci i tuoi task e monitora i progressi</p>
+            <h1 className="text-3xl font-bold text-foreground">
+              {getGreeting()}, {firstName} 👋
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
           </div>
           <UserMenuButton displayName={displayName} email={user?.email ?? ''} />
         </div>
@@ -53,7 +67,7 @@ export default async function Home() {
             <DashboardWidgets
               tasks={tasks}
               preferences={preferences}
-              displayName={displayName}
+              firstName={firstName}
             />
           </TabsContent>
 

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export interface Profile {
+  first_name: string | null
+  last_name: string | null
   full_name: string | null
   role: string | null
   company: string | null
@@ -36,7 +38,7 @@ export async function getProfile(): Promise<Profile | null> {
 
   const { data } = await supabase
     .from('profiles')
-    .select('full_name, role, company, bio, phone, timezone, avatar_url')
+    .select('first_name, last_name, full_name, role, company, bio, phone, timezone, avatar_url')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -48,15 +50,18 @@ export async function upsertProfile(profile: Partial<Profile>): Promise<{ succes
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Non autenticato' }
 
+  // Componi full_name da first + last
+  const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.full_name || null
+  const payload = { ...profile, full_name: fullName }
+
   const { error } = await supabase
     .from('profiles')
-    .upsert({ user_id: user.id, ...profile }, { onConflict: 'user_id' })
+    .upsert({ user_id: user.id, ...payload }, { onConflict: 'user_id' })
 
   if (error) return { success: false, error: error.message }
 
-  // Sincronizza full_name anche nei metadata auth
-  if (profile.full_name !== undefined) {
-    await supabase.auth.updateUser({ data: { full_name: profile.full_name } })
+  if (fullName) {
+    await supabase.auth.updateUser({ data: { full_name: fullName } })
   }
 
   revalidatePath('/', 'layout')

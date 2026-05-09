@@ -19,21 +19,23 @@ const WIDGET_META: Record<string, { label: string; icon: React.ElementType }> = 
 interface Props {
   tasks: Task[]
   preferences: UserPreferences
-  displayName: string
+  firstName: string
 }
 
-export function DashboardWidgets({ tasks, preferences, displayName }: Props) {
+export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
   const [widgets, setWidgets] = useState<string[]>(preferences.dashboard_widgets)
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
   const now = new Date()
+  // Oggi a mezzanotte — un task scade oggi NON è scaduto
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-  // Dataset per i widget
   const activeTasks = tasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
-  const overdueTasks = activeTasks.filter(t => t.due_date && new Date(t.due_date) < now).slice(0, 5)
+  // Scaduto = due_date STRETTAMENTE prima di oggi (non include oggi)
+  const overdueTasks = activeTasks.filter(t => t.due_date && new Date(t.due_date) < todayStart).slice(0, 5)
   const recentTasks = [...tasks].slice(0, 5)
   const completedWeek = tasks.filter(t => t.completed_at && new Date(t.completed_at) >= weekAgo)
 
@@ -69,30 +71,6 @@ export function DashboardWidgets({ tasks, preferences, displayName }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Header saluto */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">
-            {greeting()}, {displayName.split(' ')[0]} 👋
-          </h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            {activeTasks.length === 0
-              ? 'Tutto fatto! Nessun task aperto.'
-              : `Hai ${activeTasks.length} task ${activeTasks.length === 1 ? 'aperto' : 'aperti'}${overdueTasks.length > 0 ? `, di cui ${overdueTasks.length} ${overdueTasks.length === 1 ? 'scaduto' : 'scaduti'}` : ''}.`
-            }
-          </p>
-        </div>
-        <Button
-          variant={editMode ? 'default' : 'outline'}
-          size="sm"
-          onClick={editMode ? handleSave : () => setEditMode(true)}
-          disabled={saving}
-          className="gap-2 shrink-0"
-        >
-          {editMode ? (saving ? 'Salvataggio...' : 'Salva layout') : 'Personalizza'}
-        </Button>
-      </div>
-
       {/* Widget nascosti da aggiungere */}
       {editMode && hiddenWidgets.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -137,7 +115,6 @@ export function DashboardWidgets({ tasks, preferences, displayName }: Props) {
               )}
             </div>
 
-            {/* Contenuto widget */}
             {id === 'stats' && (
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -203,6 +180,18 @@ export function DashboardWidgets({ tasks, preferences, displayName }: Props) {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Bottone personalizza in fondo */}
+      <div className="flex justify-end">
+        <Button
+          variant={editMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={editMode ? handleSave : () => setEditMode(true)}
+          disabled={saving}
+        >
+          {editMode ? (saving ? 'Salvataggio...' : 'Salva layout') : 'Personalizza dashboard'}
+        </Button>
       </div>
     </div>
   )
