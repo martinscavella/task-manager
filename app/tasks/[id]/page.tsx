@@ -18,7 +18,6 @@ async function TaskDetailData({ id }: { id: string }) {
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  // Fetch lista task in parallelo col task corrente
   const tasks = await getTasks()
 
   return (
@@ -40,10 +39,20 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
 
         {/* Main content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-4xl px-4 py-8">
+          {/* Safe area spacer per Dynamic Island / notch — solo mobile */}
+          <div
+            className="lg:hidden w-full"
+            style={{ height: 'env(safe-area-inset-top, 44px)' }}
+          />
+          <div className="mx-auto max-w-4xl px-4 pb-8 lg:py-8">
             {/* Mobile back button */}
             <div className="mb-6 lg:hidden">
-              <Button variant="ghost" size="sm" asChild className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
+              >
                 <Link href="/">
                   <ArrowLeft className="size-4" />
                   Torna ai task
