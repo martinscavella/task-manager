@@ -26,23 +26,25 @@ interface TaskCardProps {
   kanban?: boolean
 }
 
-// Bordo superiore colorato per priorità
-const PRIORITY_TOP_BORDER: Record<number, string> = {
-  1: 'before:bg-red-500',     // Critica
-  2: 'before:bg-orange-400',  // Alta
-  3: 'before:bg-yellow-400',  // Media
-  4: 'before:bg-blue-400',    // Bassa
-  5: 'before:bg-slate-300',   // Minima
+const PRIORITY_ACCENT: Record<number, string> = {
+  1: 'bg-red-500',
+  2: 'bg-orange-400',
+  3: 'bg-yellow-400',
+  4: 'bg-blue-400',
+  5: 'bg-slate-300',
 }
 
-// Classe base condivisa per il bordo superiore via pseudo-elemento
-const TOP_BORDER_BASE = [
-  'before:content-[""]',
-  'before:absolute',
-  'before:top-0 before:left-0 before:right-0',
-  'before:h-[3px]',
-  'before:rounded-t-[inherit]',
-].join(' ')
+/** Striscia colorata in cima alla card — `rounded-t-3xl` segue la card */
+function PriorityAccent({ priority }: { priority: number }) {
+  return (
+    <div
+      className={cn(
+        'absolute inset-x-0 top-0 h-[3px] rounded-t-3xl',
+        PRIORITY_ACCENT[priority] ?? 'bg-slate-300'
+      )}
+    />
+  )
+}
 
 export function TaskCard({ task, compact = false, kanban = false }: TaskCardProps) {
   const router = useRouter()
@@ -66,7 +68,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   const statusConfig = STATUS_CONFIG[task.status]
   const priorityConfig = PRIORITY_CONFIG[task.priority as TaskPriority]
   const dueDateStatus = getDueDateStatus(task.due_date, task.status)
-  const topBorder = PRIORITY_TOP_BORDER[task.priority as number] ?? 'before:bg-slate-300'
 
   const actionsMenu = (
     <DropdownMenu>
@@ -91,20 +92,19 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     </DropdownMenu>
   )
 
-  // ── KANBAN card ──────────────────────────────────────────────
+  // ── KANBAN ────────────────────────────────────────────────
   if (kanban) {
     return (
       <>
         <div
           onClick={handleCardClick}
           className={cn(
-            'relative overflow-hidden rounded-2xl border bg-card p-3 shadow-sm cursor-pointer',
-            'hover:shadow-md transition-all',
-            TOP_BORDER_BASE, topBorder,
+            'relative rounded-3xl border bg-card p-3 pt-4 shadow-sm cursor-pointer hover:shadow-md transition-all',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
+          <PriorityAccent priority={task.priority as number} />
           <div className="flex items-start justify-between gap-2">
             <p className={cn(
               'text-sm font-medium leading-snug flex-1 min-w-0',
@@ -114,14 +114,11 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
             </p>
             {actionsMenu}
           </div>
-
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Badge className={cn('text-xs rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
               {priorityConfig.label}
             </Badge>
-            {task.label && (
-              <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>
-            )}
+            {task.label && <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>}
             {task.due_date && (
               <span className={cn(
                 'text-xs font-medium',
@@ -139,27 +136,23 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── COMPACT (list view) ──────────────────────────────────────
+  // ── COMPACT ─────────────────────────────────────────────
   if (compact) {
     return (
       <>
         <div
           onClick={handleCardClick}
           className={cn(
-            'relative overflow-hidden flex items-center gap-2 rounded-2xl border bg-card px-3 py-2.5',
+            'relative flex items-center gap-2 rounded-3xl border bg-card px-3 py-2.5 pt-3',
             'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/80',
-            TOP_BORDER_BASE, topBorder,
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          <div
-            className="shrink-0 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <PriorityAccent priority={task.priority as number} />
+          <div className="shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <TaskWorkflowStepper task={task} />
           </div>
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
@@ -171,12 +164,9 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               <Badge className={cn('text-xs shrink-0 rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
-              {task.label && (
-                <Badge variant="outline" className="text-xs shrink-0 rounded-full">{task.label}</Badge>
-              )}
+              {task.label && <Badge variant="outline" className="text-xs shrink-0 rounded-full">{task.label}</Badge>}
             </div>
           </div>
-
           {task.due_date && (
             <span className={cn(
               'text-xs shrink-0 font-medium',
@@ -187,7 +177,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               {formatDateWithStatus(task.due_date, dueDateStatus)}
             </span>
           )}
-
           {actionsMenu}
         </div>
         <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
@@ -195,19 +184,19 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── GRID / CARDS view ────────────────────────────────────────
+  // ── GRID / CARDS ──────────────────────────────────────────
   return (
     <>
       <div
         onClick={handleCardClick}
         className={cn(
-          'relative overflow-hidden group rounded-2xl border bg-card p-4',
+          'relative group rounded-3xl border bg-card p-4 pt-5',
           'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
-          TOP_BORDER_BASE, topBorder,
           (isCompleted || isCancelled) && 'opacity-60',
           isBlocked && 'border-red-200 bg-red-50/50'
         )}
       >
+        <PriorityAccent priority={task.priority as number} />
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -219,7 +208,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               </h3>
               {task.label && <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>}
             </div>
-
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <Badge className={cn('rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
@@ -236,32 +224,20 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
                 </span>
               )}
             </div>
-
             {task.note && (
               <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{task.note}</p>
             )}
-
-            <div
-              className="mt-3 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="mt-3 overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <TaskWorkflowStepper task={task} />
             </div>
           </div>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon-sm">
-                <MoreHorizontalIcon className="size-4" />
-              </Button>
+              <Button variant="ghost" size="icon-sm"><MoreHorizontalIcon className="size-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                <PencilIcon className="size-4" />Modifica
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSetBlocked}>
-                <Ban className="size-4" />Blocca
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEditOpen(true)}><PencilIcon className="size-4" />Modifica</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSetBlocked}><Ban className="size-4" />Blocca</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>Annulla Task</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={handleDelete} disabled={deleting}>
