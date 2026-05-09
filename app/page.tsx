@@ -2,9 +2,9 @@ import { getTasks, getTaskAnalytics, signOut } from '@/lib/actions'
 import { TaskList } from '@/components/task-list'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BarChart3, ListTodo, LogOut } from 'lucide-react'
+import { BarChart3, ListTodo } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
+import { UserMenuButton } from '@/components/user-menu-button'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -15,6 +15,10 @@ export default async function Home() {
     getTaskAnalytics()
   ])
 
+  // Ricava nome visualizzato: full_name > email username > email
+  const fullName = user?.user_metadata?.full_name as string | undefined
+  const displayName = fullName || user?.email?.split('@')[0] || 'Utente'
+
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
@@ -23,15 +27,7 @@ export default async function Home() {
             <h1 className="text-3xl font-bold text-foreground">Task Manager</h1>
             <p className="text-muted-foreground mt-1">Gestisci i tuoi task e monitora i progressi</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
-            <form action={signOut}>
-              <Button variant="outline" size="sm" type="submit" className="gap-2">
-                <LogOut className="size-4" />
-                Esci
-              </Button>
-            </form>
-          </div>
+          <UserMenuButton displayName={displayName} email={user?.email ?? ''} />
         </div>
 
         <Tabs defaultValue="tasks" className="space-y-6">
