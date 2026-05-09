@@ -23,12 +23,14 @@ export interface UserPreferences {
   dashboard_widgets: string[]
 }
 
+const DEFAULT_WIDGETS = ['stats', 'overdue', 'recent', 'completed_week', 'due_today', 'by_status', 'by_priority', 'by_label', 'streak', 'weekly_chart', 'next_due', 'quick_actions']
+
 const DEFAULT_PREFS: UserPreferences = {
   default_view: 'list',
   default_sort: 'created_desc',
   show_completed: true,
   compact_cards: false,
-  dashboard_widgets: ['stats', 'overdue', 'recent', 'completed_week'],
+  dashboard_widgets: DEFAULT_WIDGETS,
 }
 
 export async function getProfile(): Promise<Profile | null> {
@@ -50,7 +52,6 @@ export async function upsertProfile(profile: Partial<Profile>): Promise<{ succes
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Non autenticato' }
 
-  // Componi full_name da first + last
   const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.full_name || null
   const payload = { ...profile, full_name: fullName }
 
@@ -60,9 +61,7 @@ export async function upsertProfile(profile: Partial<Profile>): Promise<{ succes
 
   if (error) return { success: false, error: error.message }
 
-  if (fullName) {
-    await supabase.auth.updateUser({ data: { full_name: fullName } })
-  }
+  if (fullName) await supabase.auth.updateUser({ data: { full_name: fullName } })
 
   revalidatePath('/', 'layout')
   revalidatePath('/settings')
@@ -86,7 +85,9 @@ export async function getPreferences(): Promise<UserPreferences> {
     default_sort: data.default_sort ?? DEFAULT_PREFS.default_sort,
     show_completed: data.show_completed ?? DEFAULT_PREFS.show_completed,
     compact_cards: data.compact_cards ?? DEFAULT_PREFS.compact_cards,
-    dashboard_widgets: data.dashboard_widgets ?? DEFAULT_PREFS.dashboard_widgets,
+    dashboard_widgets: Array.isArray(data.dashboard_widgets) && data.dashboard_widgets.length > 0
+      ? data.dashboard_widgets
+      : DEFAULT_WIDGETS,
   }
 }
 
