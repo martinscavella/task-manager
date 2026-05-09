@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from './types'
 
 export async function getTasks(): Promise<Task[]> {
@@ -84,7 +85,6 @@ export async function updateTask(input: UpdateTaskInput): Promise<{ success: boo
     return { success: false, error: error.message }
   }
 
-  // Invalida solo le pagine effettivamente toccate
   revalidatePath('/', 'page')
   revalidatePath(`/tasks/${id}`, 'page')
   return { success: true }
@@ -107,11 +107,10 @@ export async function deleteTask(id: string): Promise<{ success: boolean; error?
   return { success: true }
 }
 
-export async function signOut(): Promise<{ success: boolean }> {
+export async function signOut(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  revalidatePath('/', 'layout')
-  return { success: true }
+  redirect('/landing')
 }
 
 export async function getTaskAnalytics() {
