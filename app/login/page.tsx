@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -12,9 +12,17 @@ import { Toaster } from '@/components/ui/toaster'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export default function LoginPage() {
-  const router = useRouter()
+// Componente separato che usa useSearchParams — deve stare dentro <Suspense>
+function TabInitializer({ onRegister }: { onRegister: () => void }) {
   const searchParams = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('tab') === 'register') onRegister()
+  }, [searchParams, onRegister])
+  return null
+}
+
+function LoginContent() {
+  const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -23,11 +31,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // Supporta ?tab=register dal link landing
-  useEffect(() => {
-    if (searchParams.get('tab') === 'register') setTab('register')
-  }, [searchParams])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -53,7 +56,7 @@ export default function LoginPage() {
     if (error) {
       toast({ title: 'Errore registrazione', description: error.message, variant: 'destructive' })
     } else {
-      toast({ title: 'Account creato!', description: 'Controlla la tua email per confermare l\'account.' })
+      toast({ title: 'Account creato!', description: "Controlla la tua email per confermare l'account." })
       setTab('login')
     }
     setLoading(false)
@@ -62,6 +65,11 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex">
       <Toaster />
+
+      {/* Legge ?tab=register senza bloccare il prerender */}
+      <Suspense fallback={null}>
+        <TabInitializer onRegister={() => setTab('register')} />
+      </Suspense>
 
       {/* LEFT — branding */}
       <div className="hidden lg:flex w-1/2 bg-foreground text-background flex-col justify-between p-12">
@@ -165,5 +173,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
