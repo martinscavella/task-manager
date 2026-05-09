@@ -16,16 +16,33 @@ import { deleteTask, updateTaskStatus } from '@/lib/actions'
 import { EditTaskDialog } from './edit-task-dialog'
 import { TaskWorkflowStepper } from './task-workflow-stepper'
 import { StepBadge } from './step-badge'
-import { STATUS_CONFIG, PRIORITY_CONFIG, WORKFLOW_STEPS, type Task, type TaskStatus, type TaskPriority } from '@/lib/types'
+import { STATUS_CONFIG, PRIORITY_CONFIG, type Task, type TaskStatus, type TaskPriority } from '@/lib/types'
 import { getDueDateStatus, formatDateWithStatus } from '@/lib/due-date-utils'
 import { cn } from '@/lib/utils'
 
 interface TaskCardProps {
   task: Task
   compact?: boolean
-  /** In kanban columns: mostra solo il badge stato, non lo stepper completo */
   kanban?: boolean
 }
+
+// Bordo superiore colorato per priorità
+const PRIORITY_TOP_BORDER: Record<number, string> = {
+  1: 'before:bg-red-500',     // Critica
+  2: 'before:bg-orange-400',  // Alta
+  3: 'before:bg-yellow-400',  // Media
+  4: 'before:bg-blue-400',    // Bassa
+  5: 'before:bg-slate-300',   // Minima
+}
+
+// Classe base condivisa per il bordo superiore via pseudo-elemento
+const TOP_BORDER_BASE = [
+  'before:content-[""]',
+  'before:absolute',
+  'before:top-0 before:left-0 before:right-0',
+  'before:h-[3px]',
+  'before:rounded-t-[inherit]',
+].join(' ')
 
 export function TaskCard({ task, compact = false, kanban = false }: TaskCardProps) {
   const router = useRouter()
@@ -49,6 +66,7 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   const statusConfig = STATUS_CONFIG[task.status]
   const priorityConfig = PRIORITY_CONFIG[task.priority as TaskPriority]
   const dueDateStatus = getDueDateStatus(task.due_date, task.status)
+  const topBorder = PRIORITY_TOP_BORDER[task.priority as number] ?? 'before:bg-slate-300'
 
   const actionsMenu = (
     <DropdownMenu>
@@ -74,14 +92,15 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   )
 
   // ── KANBAN card ──────────────────────────────────────────────
-  // Slim card: titolo, priorità, scadenza, badge stato. Niente stepper.
   if (kanban) {
     return (
       <>
         <div
           onClick={handleCardClick}
           className={cn(
-            'rounded-md border bg-card p-3 shadow-sm cursor-pointer hover:shadow-md transition-all',
+            'relative overflow-hidden rounded-2xl border bg-card p-3 shadow-sm cursor-pointer',
+            'hover:shadow-md transition-all',
+            TOP_BORDER_BASE, topBorder,
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
@@ -97,11 +116,11 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge className={cn('text-xs', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+            <Badge className={cn('text-xs rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
               {priorityConfig.label}
             </Badge>
             {task.label && (
-              <Badge variant="outline" className="text-xs">{task.label}</Badge>
+              <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>
             )}
             {task.due_date && (
               <span className={cn(
@@ -127,12 +146,13 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
         <div
           onClick={handleCardClick}
           className={cn(
-            'flex items-center gap-2 rounded-lg border bg-card px-3 py-2.5 transition-all hover:shadow-sm cursor-pointer hover:bg-card/80',
+            'relative overflow-hidden flex items-center gap-2 rounded-2xl border bg-card px-3 py-2.5',
+            'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/80',
+            TOP_BORDER_BASE, topBorder,
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          {/* Stepper — isolated from card click */}
           <div
             className="shrink-0 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
@@ -140,7 +160,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
             <TaskWorkflowStepper task={task} />
           </div>
 
-          {/* Title + badges */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
@@ -149,16 +168,15 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               )}>
                 {task.title}
               </span>
-              <Badge className={cn('text-xs shrink-0', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+              <Badge className={cn('text-xs shrink-0 rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
               {task.label && (
-                <Badge variant="outline" className="text-xs shrink-0">{task.label}</Badge>
+                <Badge variant="outline" className="text-xs shrink-0 rounded-full">{task.label}</Badge>
               )}
             </div>
           </div>
 
-          {/* Due date */}
           {task.due_date && (
             <span className={cn(
               'text-xs shrink-0 font-medium',
@@ -183,7 +201,9 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
       <div
         onClick={handleCardClick}
         className={cn(
-          'group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
+          'relative overflow-hidden group rounded-2xl border bg-card p-4',
+          'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
+          TOP_BORDER_BASE, topBorder,
           (isCompleted || isCancelled) && 'opacity-60',
           isBlocked && 'border-red-200 bg-red-50/50'
         )}
@@ -197,11 +217,11 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               )}>
                 {task.title}
               </h3>
-              {task.label && <Badge variant="outline" className="text-xs">{task.label}</Badge>}
+              {task.label && <Badge variant="outline" className="text-xs rounded-full">{task.label}</Badge>}
             </div>
 
             <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <Badge className={cn(priorityConfig.bgColor, priorityConfig.color)} variant="outline">
+              <Badge className={cn('rounded-full', priorityConfig.bgColor, priorityConfig.color)} variant="outline">
                 {priorityConfig.label}
               </Badge>
               <StepBadge variant="full" step={statusConfig.label} />
@@ -221,7 +241,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{task.note}</p>
             )}
 
-            {/* Stepper — isolated from card click */}
             <div
               className="mt-3 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
