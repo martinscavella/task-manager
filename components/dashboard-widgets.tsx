@@ -9,7 +9,7 @@ import type { Task, TaskStatus, TaskPriority } from '@/lib/types'
 import {
   BarChart3, AlertCircle, Clock, CheckCircle2, GripVertical, EyeOff,
   CalendarClock, Tag, Flame, Activity, Star, Plus, ArrowRight,
-  Zap,
+  Zap, Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -23,9 +23,9 @@ const WIDGET_META: Record<string, { label: string; icon: React.ElementType; wide
   completed_week:  { label: 'Completati (settimana)', icon: CheckCircle2 },
   due_today:       { label: 'In scadenza oggi',       icon: CalendarClock },
   by_status:       { label: 'Per stato',             icon: Activity },
-  by_priority:     { label: 'Per priorità',          icon: Flame },
+  by_priority:     { label: 'Per priorit\u00e0',          icon: Flame },
   by_label:        { label: 'Per etichetta',         icon: Tag },
-  streak:          { label: 'Streak produttività',   icon: Star },
+  streak:          { label: 'Streak produttivit\u00e0',   icon: Star },
   weekly_chart:    { label: 'Carico settimanale',    icon: BarChart3, wide: true },
   next_due:        { label: 'Prossima scadenza',     icon: CalendarClock },
   quick_actions:   { label: 'Quick Actions',         icon: Zap },
@@ -78,9 +78,10 @@ interface Props {
   tasks: Task[]
   preferences: UserPreferences
   firstName: string
+  onTabChange: (tab: string) => void
 }
 
-export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
+export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }: Props) {
   const router = useRouter()
   const [widgets, setWidgets] = useState<string[]>(preferences.dashboard_widgets?.length ? preferences.dashboard_widgets : DEFAULT_WIDGETS)
   const [editMode, setEditMode] = useState(false)
@@ -267,7 +268,7 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
               return (
                 <li key={p}>
                   <div className="flex items-center justify-between text-xs mb-0.5">
-                    <span className={cn('font-medium', cfg?.color)}>P{p} — {cfg?.label}</span>
+                    <span className={cn('font-medium', cfg?.color)}>P{p} \u2014 {cfg?.label}</span>
                     <span className="text-muted-foreground">{count}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -296,8 +297,8 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
-               streak < 3 ? 'Buon inizio, continua così!' :
-               streak < 7 ? 'Stai andando forte! 💪' : 'Sei inarrestabile! 🚀'}
+               streak < 3 ? 'Buon inizio, continua cos\u00ec!' :
+               streak < 7 ? 'Stai andando forte! \ud83d\udcaa' : 'Sei inarrestabile! \ud83d\ude80'}
             </p>
           </div>
         )
@@ -344,6 +345,7 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
       case 'quick_actions':
         return (
           <div className="space-y-3">
+            {/* Quick create */}
             <form onSubmit={e => { e.preventDefault(); handleQuickCreate() }} className="flex gap-2">
               <Input
                 value={quickTitle}
@@ -356,17 +358,38 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
                 <Plus className="size-3.5" />
               </Button>
             </form>
+            {/* Azioni rapide — usano onTabChange per navigare senza reload */}
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Tutti i task', href: '/?tab=tasks', icon: ArrowRight },
-                { label: 'Analytics', href: '/?tab=analytics', icon: BarChart3 },
-                { label: 'Impostazioni', href: '/settings', icon: Star },
-                { label: 'Profilo', href: '/settings', icon: Star },
-              ].map(({ label, href, icon: Icon }) => (
-                <a key={label} href={href} className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border bg-muted/30 hover:bg-muted transition-colors">
-                  <Icon className="size-3 text-muted-foreground" />{label}
-                </a>
-              ))}
+              {([
+                { label: 'Tutti i task', tab: 'tasks', icon: ArrowRight },
+                { label: 'Analytics',    tab: 'analytics', icon: BarChart3 },
+                { label: 'Impostazioni', href: '/settings', icon: Settings },
+                { label: 'Profilo',      href: '/settings', icon: Star },
+              ] as const).map((item) => {
+                const Icon = item.icon
+                if ('tab' in item) {
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => onTabChange(item.tab)}
+                      className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border bg-muted/30 hover:bg-muted transition-colors text-left"
+                    >
+                      <Icon className="size-3 text-muted-foreground shrink-0" />
+                      {item.label}
+                    </button>
+                  )
+                }
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border bg-muted/30 hover:bg-muted transition-colors"
+                  >
+                    <Icon className="size-3 text-muted-foreground shrink-0" />
+                    {item.label}
+                  </a>
+                )
+              })}
             </div>
           </div>
         )
@@ -424,14 +447,13 @@ export function DashboardWidgets({ tasks, preferences, firstName }: Props) {
         })}
       </div>
 
-      {/* "Personalizza" — su mobile sopra la bottom nav, lontano dal FAB */}
       <div className="flex justify-end pb-2">
         <Button
           variant={editMode ? 'default' : 'outline'}
           size="sm"
           onClick={editMode ? handleSave : () => setEditMode(true)}
           disabled={saving}
-          className="md:mr-0 mr-16" // sposta a sinistra del FAB su mobile
+          className="md:mr-0 mr-16"
         >
           {editMode
             ? (saving ? 'Salvataggio...' : 'Salva layout')

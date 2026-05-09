@@ -32,12 +32,10 @@ export function HomeClient({
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Safe area per Dynamic Island / notch — spinge il contenuto sotto */}
       <div className="w-full" style={{ height: 'env(safe-area-inset-top, 0px)' }} />
 
       <div className="mx-auto max-w-7xl px-4 pt-3 pb-28">
 
-        {/* Header — avatar visibile solo su desktop */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
@@ -45,13 +43,12 @@ export function HomeClient({
             </h1>
             <p className="text-muted-foreground mt-0.5 text-sm capitalize">{dateLabel}</p>
           </div>
-          {/* Su mobile è ridondante: il profilo è già nella bottom nav */}
           <div className="hidden sm:block">
             <UserMenuButton displayName={displayName} email={email} />
           </div>
         </div>
 
-        {/* Desktop: tabs orizzontali */}
+        {/* Desktop */}
         <div className="hidden md:block">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList>
@@ -66,7 +63,7 @@ export function HomeClient({
               </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
-              <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} />
+              <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} onTabChange={setActiveTab} />
             </TabsContent>
             <TabsContent value="tasks">
               <TaskList tasks={tasks} />
@@ -77,10 +74,10 @@ export function HomeClient({
           </Tabs>
         </div>
 
-        {/* Mobile: pannello attivo */}
+        {/* Mobile */}
         <div className="md:hidden">
           {activeTab === 'dashboard' && (
-            <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} />
+            <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} onTabChange={setActiveTab} />
           )}
           {activeTab === 'tasks' && <TaskList tasks={tasks} />}
           {activeTab === 'analytics' && <AnalyticsDashboard data={analytics} />}
