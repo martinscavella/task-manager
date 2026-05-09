@@ -118,8 +118,25 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Remove tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
+    /* Smooth scroll momentum on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text size adjust on orientation change */
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Safe area support for notch / home bar */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pb-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Bottom nav height anchor */
+  .bottom-nav-height {
+    height: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
 }
