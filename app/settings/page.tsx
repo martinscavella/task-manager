@@ -4,14 +4,14 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { SettingsView } from '@/components/settings-view'
+import { getProfile, getPreferences } from '@/lib/profile-actions'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const fullName = user.user_metadata?.full_name as string | undefined
-  const displayName = fullName || user.email?.split('@')[0] || 'Utente'
+  const [profile, preferences] = await Promise.all([getProfile(), getPreferences()])
 
   return (
     <main className="min-h-screen bg-background">
@@ -28,8 +28,8 @@ export default async function SettingsPage() {
         </div>
         <SettingsView
           email={user.email ?? ''}
-          displayName={displayName}
-          userId={user.id}
+          profile={profile}
+          preferences={preferences}
         />
       </div>
     </main>
