@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,7 +26,9 @@ import {
   List,
   Kanban,
   ChevronRight,
-  FolderIcon
+  FolderIcon,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -50,6 +52,8 @@ export function TaskList({ tasks }: TaskListProps) {
     setSearchQuery,
   } = useViewSettings()
 
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+
   const getInternalViewMode = (viewMode: 'list' | 'board' | 'grid'): 'list' | 'cards' | 'kanban' => {
     if (viewMode === 'list') return 'list'
     if (viewMode === 'board') return 'kanban'
@@ -59,6 +63,12 @@ export function TaskList({ tasks }: TaskListProps) {
   const internalViewMode = getInternalViewMode(settings.viewMode)
   const statusFilter = settings.filterStatus.length === 0 ? 'all' : settings.filterStatus[0]
   const priorityFilter = settings.filterPriority.length === 0 ? 'all' : settings.filterPriority[0]
+
+  const activeFiltersCount = [
+    statusFilter !== 'all',
+    priorityFilter !== 'all',
+    settings.groupBy !== 'none',
+  ].filter(Boolean).length
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -142,15 +152,14 @@ export function TaskList({ tasks }: TaskListProps) {
       s => !KANBAN_BASE.includes(s) && taskList.some(t => t.status === s)
     )
     const columnsToShow = [...KANBAN_BASE, ...extraStatuses]
-
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
         {columnsToShow.map((status) => {
           const config = STATUS_CONFIG[status]
           const statusTasks = taskList.filter(t => t.status === status)
           if (statusFilter !== 'all' && status !== statusFilter) return null
           return (
-            <div key={status} className="flex-shrink-0 w-64">
+            <div key={status} className="flex-shrink-0 w-[76vw] sm:w-64 snap-start">
               <div className={cn('rounded-t-lg px-3 py-2', config.bgColor)}>
                 <h3 className={cn('font-medium text-sm', config.color)}>
                   {config.label} ({statusTasks.length})
@@ -189,9 +198,56 @@ export function TaskList({ tasks }: TaskListProps) {
   if (!isLoaded) return null
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <div className="space-y-4">
+
+      {/* ── Mobile toolbar ─────────────────────────────────────── */}
+      <div className="flex gap-2 md:hidden">
+        <div className="relative flex-1">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca..."
+            value={settings.searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-10"
+          />
+        </div>
+        {/* Filtri */}
+        <button
+          onClick={() => setFilterSheetOpen(true)}
+          className={cn(
+            'relative flex items-center justify-center size-10 rounded-xl border transition-colors shrink-0',
+            activeFiltersCount > 0 ? 'bg-foreground text-background border-foreground' : 'bg-background'
+          )}
+        >
+          <SlidersHorizontal className="size-4" />
+          {activeFiltersCount > 0 && (
+            <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+              {activeFiltersCount}
+            </span>
+          )}
+        </button>
+        {/* View mode */}
+        <div className="flex items-center border rounded-xl p-1 gap-0.5 shrink-0">
+          {(['list', 'grid', 'board'] as const).map((mode) => {
+            const Icon = mode === 'list' ? List : mode === 'grid' ? LayoutGrid : Kanban
+            return (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors',
+                  settings.viewMode === mode ? 'bg-foreground text-background' : 'text-muted-foreground'
+                )}
+              >
+                <Icon className="size-4" />
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Desktop toolbar ─────────────────────────────────────── */}
+      <div className="hidden md:flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="relative flex-1 max-w-sm">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
@@ -203,13 +259,9 @@ export function TaskList({ tasks }: TaskListProps) {
         </div>
         <CreateTaskDialog />
       </div>
-
-      {/* Filters and View Options */}
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="hidden md:flex flex-wrap gap-3 items-center">
         <Select value={statusFilter} onValueChange={(v) => setFilterStatus(v === 'all' ? [] : [v])}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Stato" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Stato" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti gli stati</SelectItem>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
@@ -217,11 +269,8 @@ export function TaskList({ tasks }: TaskListProps) {
             ))}
           </SelectContent>
         </Select>
-
         <Select value={priorityFilter === 'all' ? 'all' : priorityFilter.toString()} onValueChange={(v) => setFilterPriority(v === 'all' ? [] : [v])}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Priorità" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Priorità" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutte le priorità</SelectItem>
             {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
@@ -229,7 +278,6 @@ export function TaskList({ tasks }: TaskListProps) {
             ))}
           </SelectContent>
         </Select>
-
         <Select value={settings.groupBy} onValueChange={(v) => setGroupBy(v as any)}>
           <SelectTrigger className="w-[180px]">
             <FolderIcon className="size-4 mr-2" />
@@ -242,11 +290,8 @@ export function TaskList({ tasks }: TaskListProps) {
             <SelectItem value="label">Per etichetta</SelectItem>
           </SelectContent>
         </Select>
-
         <Select value={settings.sortBy} onValueChange={(v) => setSortBy(v as any)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Ordina per" />
-          </SelectTrigger>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Ordina per" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="created_at">Data creazione</SelectItem>
             <SelectItem value="due_date">Data scadenza</SelectItem>
@@ -254,24 +299,111 @@ export function TaskList({ tasks }: TaskListProps) {
             <SelectItem value="title">Nome</SelectItem>
           </SelectContent>
         </Select>
-
-        <Button variant={settings.sortOrder === 'asc' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setSortOrder('asc')} title="Ordine crescente">↑</Button>
-        <Button variant={settings.sortOrder === 'desc' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setSortOrder('desc')} title="Ordine decrescente">↓</Button>
-
+        <Button variant={settings.sortOrder === 'asc' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setSortOrder('asc')}>↑</Button>
+        <Button variant={settings.sortOrder === 'desc' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setSortOrder('desc')}>↓</Button>
         <div className="flex items-center gap-1 ml-auto border rounded-lg p-1">
-          <Button variant={settings.viewMode === 'list' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('list')}>
-            <List className="size-4" />
-          </Button>
-          <Button variant={settings.viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('grid')}>
-            <LayoutGrid className="size-4" />
-          </Button>
-          <Button variant={settings.viewMode === 'board' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('board')}>
-            <Kanban className="size-4" />
-          </Button>
+          <Button variant={settings.viewMode === 'list' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('list')}><List className="size-4" /></Button>
+          <Button variant={settings.viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('grid')}><LayoutGrid className="size-4" /></Button>
+          <Button variant={settings.viewMode === 'board' ? 'secondary' : 'ghost'} size="icon-sm" onClick={() => setViewMode('board')}><Kanban className="size-4" /></Button>
         </div>
       </div>
 
-      {/* Task Content */}
+      {/* ── Filter bottom sheet (mobile) ────────────────────────── */}
+      {filterSheetOpen && (
+        <div className="fixed inset-0 z-50 md:hidden" onClick={() => setFilterSheetOpen(false)}>
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+          <div
+            className="absolute bottom-0 inset-x-0 bg-background rounded-t-3xl border-t px-4 pt-4 pb-safe shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
+              <p className="text-sm font-semibold">Filtri</p>
+              <button onClick={() => setFilterSheetOpen(false)} className="text-muted-foreground">
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="space-y-4 pb-2">
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stato</p>
+                <div className="flex flex-wrap gap-2">
+                  {[{ value: 'all', label: 'Tutti' }, ...Object.entries(STATUS_CONFIG).map(([k, v]) => ({ value: k, label: v.label }))].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setFilterStatus(value === 'all' ? [] : [value])}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                        statusFilter === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priorità</p>
+                <div className="flex flex-wrap gap-2">
+                  {[{ value: 'all', label: 'Tutte' }, ...Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label }))].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setFilterPriority(value === 'all' ? [] : [value])}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                        (priorityFilter === 'all' ? 'all' : priorityFilter.toString()) === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Raggruppa per</p>
+                <div className="flex flex-wrap gap-2">
+                  {[{ value: 'none', label: 'Nessuno' }, { value: 'status', label: 'Stato' }, { value: 'priority', label: 'Priorità' }, { value: 'label', label: 'Etichetta' }].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setGroupBy(value as any)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                        settings.groupBy === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ordina per</p>
+                <div className="flex flex-wrap gap-2">
+                  {[{ value: 'created_at', label: 'Data creazione' }, { value: 'due_date', label: 'Scadenza' }, { value: 'priority', label: 'Priorità' }, { value: 'title', label: 'Nome' }].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setSortBy(value as any)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                        settings.sortBy === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => setFilterSheetOpen(false)}
+                className="w-full mt-2 rounded-xl bg-foreground text-background py-3 text-sm font-semibold"
+              >
+                Applica filtri{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Task content ────────────────────────────────────────── */}
       {sortedAndFiltered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
           <p className="text-lg font-medium">Nessun task trovato</p>
@@ -281,10 +413,9 @@ export function TaskList({ tasks }: TaskListProps) {
         renderKanban(sortedAndFiltered)
       ) : (
         <div className="space-y-6">
-          {settings.groupBy === 'none' ? (
-            activeTasks.length > 0 && renderTasks(activeTasks)
-          ) : (
-            Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
+          {settings.groupBy === 'none'
+            ? activeTasks.length > 0 && renderTasks(activeTasks)
+            : Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
               <Collapsible key={groupName} defaultOpen>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2">
@@ -293,13 +424,10 @@ export function TaskList({ tasks }: TaskListProps) {
                     <span className="text-muted-foreground">({groupTasks.length})</span>
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">
-                  {renderTasks(groupTasks)}
-                </CollapsibleContent>
+                <CollapsibleContent className="mt-2">{renderTasks(groupTasks)}</CollapsibleContent>
               </Collapsible>
             ))
-          )}
-
+          }
           {completedTasks.length > 0 && (
             <Collapsible defaultOpen={false}>
               <CollapsibleTrigger asChild>
@@ -312,7 +440,6 @@ export function TaskList({ tasks }: TaskListProps) {
               <CollapsibleContent className="mt-2">{renderTasks(completedTasks)}</CollapsibleContent>
             </Collapsible>
           )}
-
           {cancelledTasks.length > 0 && (
             <Collapsible defaultOpen={false}>
               <CollapsibleTrigger asChild>

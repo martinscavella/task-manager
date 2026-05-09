@@ -32,12 +32,14 @@ export function HomeClient({
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 pt-6 pb-safe">
+      {/* Safe area top per Dynamic Island / notch */}
+      <div style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }} />
 
+      <div className="mx-auto max-w-7xl px-4 pt-4 pb-safe">
         {/* Header */}
-        <div className="mb-6 flex items-start justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
               {greeting}, {firstName} 👋
             </h1>
             <p className="text-muted-foreground mt-0.5 text-sm capitalize">{dateLabel}</p>
@@ -81,7 +83,6 @@ export function HomeClient({
         </div>
       </div>
 
-      {/* Mobile UI */}
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
       <MobileFab />
     </main>
