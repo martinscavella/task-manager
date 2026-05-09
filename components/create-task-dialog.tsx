@@ -26,6 +26,10 @@ import { createTask } from '@/lib/actions'
 import { LabelCombobox } from './label-combobox'
 import { STATUS_CONFIG, PRIORITY_CONFIG, isBugLabel, type TaskPriority, type TaskStatus } from '@/lib/types'
 
+function today() {
+  return new Date().toISOString().split('T')[0]
+}
+
 export function CreateTaskDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -33,7 +37,7 @@ export function CreateTaskDialog() {
   const [priority, setPriority] = useState<TaskPriority>(3)
   const [status, setStatus] = useState<TaskStatus>('TO_BE_STARTED')
   const [label, setLabel] = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState(today)
   const [note, setNote] = useState('')
   const [jiraUrl, setJiraUrl] = useState('')
   const [jiraKey, setJiraKey] = useState('')
@@ -47,7 +51,7 @@ export function CreateTaskDialog() {
     setPriority(3)
     setStatus('TO_BE_STARTED')
     setLabel('')
-    setDueDate('')
+    setDueDate(today())
     setNote('')
     setJiraUrl('')
     setJiraKey('')
@@ -173,51 +177,23 @@ export function CreateTaskDialog() {
                   <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
                   Bug / Jira Tracking
                 </h3>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="jiraKey">Jira Key</Label>
-                    <Input
-                      id="jiraKey"
-                      value={jiraKey}
-                      onChange={(e) => setJiraKey(e.target.value)}
-                      placeholder="es. PROJ-123"
-                      className="font-mono h-8"
-                    />
+                    <Input id="jiraKey" value={jiraKey} onChange={(e) => setJiraKey(e.target.value)} placeholder="es. PROJ-123" className="font-mono h-8" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="jiraUrl">Jira Link</Label>
-                    <Input
-                      id="jiraUrl"
-                      value={jiraUrl}
-                      onChange={(e) => setJiraUrl(e.target.value)}
-                      placeholder="https://jira..."
-                      type="url"
-                      className="h-8"
-                    />
+                    <Input id="jiraUrl" value={jiraUrl} onChange={(e) => setJiraUrl(e.target.value)} placeholder="https://jira..." type="url" className="h-8" />
                   </div>
                 </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="code">Codice / Commit</Label>
-                  <Input
-                    id="code"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="es. abc1234, feature/bug-fix"
-                    className="font-mono h-8"
-                  />
+                  <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="es. abc1234, feature/bug-fix" className="font-mono h-8" />
                 </div>
-
                 <div className="grid gap-2">
                   <Label htmlFor="info">Info aggiuntive</Label>
-                  <Textarea
-                    id="info"
-                    value={info}
-                    onChange={(e) => setInfo(e.target.value)}
-                    placeholder="Stack trace, note tecniche..."
-                    rows={2}
-                  />
+                  <Textarea id="info" value={info} onChange={(e) => setInfo(e.target.value)} placeholder="Stack trace, note tecniche..." rows={2} />
                 </div>
               </div>
             )}

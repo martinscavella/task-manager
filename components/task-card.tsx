@@ -26,24 +26,13 @@ interface TaskCardProps {
   kanban?: boolean
 }
 
-const PRIORITY_ACCENT: Record<number, string> = {
-  1: 'bg-red-500',
-  2: 'bg-orange-400',
-  3: 'bg-yellow-400',
-  4: 'bg-blue-400',
-  5: 'bg-slate-300',
-}
-
-/** Striscia colorata in cima alla card — `rounded-t-3xl` segue la card */
-function PriorityAccent({ priority }: { priority: number }) {
-  return (
-    <div
-      className={cn(
-        'absolute inset-x-0 top-0 h-[3px] rounded-t-3xl',
-        PRIORITY_ACCENT[priority] ?? 'bg-slate-300'
-      )}
-    />
-  )
+// Colore HEX del bordo superiore per priorità
+const PRIORITY_BORDER_COLOR: Record<number, string> = {
+  1: '#ef4444', // red-500
+  2: '#fb923c', // orange-400
+  3: '#facc15', // yellow-400
+  4: '#60a5fa', // blue-400
+  5: '#cbd5e1', // slate-300
 }
 
 export function TaskCard({ task, compact = false, kanban = false }: TaskCardProps) {
@@ -68,6 +57,10 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   const statusConfig = STATUS_CONFIG[task.status]
   const priorityConfig = PRIORITY_CONFIG[task.priority as TaskPriority]
   const dueDateStatus = getDueDateStatus(task.due_date, task.status)
+  const borderColor = PRIORITY_BORDER_COLOR[task.priority as number] ?? '#cbd5e1'
+
+  // border-t colorato via inline style — segue nativamente rounded-3xl
+  const cardStyle = { borderTopColor: borderColor, borderTopWidth: '3px' }
 
   const actionsMenu = (
     <DropdownMenu>
@@ -92,19 +85,19 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     </DropdownMenu>
   )
 
-  // ── KANBAN ────────────────────────────────────────────────
+  // ── KANBAN ────────────────────────────────────────────────────
   if (kanban) {
     return (
       <>
         <div
           onClick={handleCardClick}
+          style={cardStyle}
           className={cn(
-            'relative rounded-3xl border bg-card p-3 pt-4 shadow-sm cursor-pointer hover:shadow-md transition-all',
+            'rounded-3xl border bg-card p-3 shadow-sm cursor-pointer hover:shadow-md transition-all',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          <PriorityAccent priority={task.priority as number} />
           <div className="flex items-start justify-between gap-2">
             <p className={cn(
               'text-sm font-medium leading-snug flex-1 min-w-0',
@@ -136,20 +129,20 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── COMPACT ─────────────────────────────────────────────
+  // ── COMPACT ───────────────────────────────────────────────────
   if (compact) {
     return (
       <>
         <div
           onClick={handleCardClick}
+          style={cardStyle}
           className={cn(
-            'relative flex items-center gap-2 rounded-3xl border bg-card px-3 py-2.5 pt-3',
+            'flex items-center gap-2 rounded-3xl border bg-card px-3 py-2.5',
             'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/80',
             (isCompleted || isCancelled) && 'opacity-60',
             isBlocked && 'border-red-200 bg-red-50/50'
           )}
         >
-          <PriorityAccent priority={task.priority as number} />
           <div className="shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <TaskWorkflowStepper task={task} />
           </div>
@@ -184,19 +177,19 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── GRID / CARDS ──────────────────────────────────────────
+  // ── GRID / CARDS ──────────────────────────────────────────────
   return (
     <>
       <div
         onClick={handleCardClick}
+        style={cardStyle}
         className={cn(
-          'relative group rounded-3xl border bg-card p-4 pt-5',
+          'group rounded-3xl border bg-card p-4',
           'shadow-sm transition-all hover:shadow-md cursor-pointer hover:bg-card/50',
           (isCompleted || isCancelled) && 'opacity-60',
           isBlocked && 'border-red-200 bg-red-50/50'
         )}
       >
-        <PriorityAccent priority={task.priority as number} />
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
