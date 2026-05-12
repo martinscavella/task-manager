@@ -21,7 +21,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'status',   label: 'Stato' },
-  { value: 'priority', label: 'Priorit\u00e0' },
+  { value: 'priority', label: 'Priorità' },
   { value: 'due_date', label: 'Scadenza' },
   { value: 'title',    label: 'Titolo' },
 ]
@@ -29,7 +29,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 const GROUP_OPTIONS: { value: GroupKey; label: string }[] = [
   { value: 'none',     label: 'Nessun gruppo' },
   { value: 'status',   label: 'Per stato' },
-  { value: 'priority', label: 'Per priorit\u00e0' },
+  { value: 'priority', label: 'Per priorità' },
   { value: 'label',    label: 'Per etichetta' },
 ]
 
@@ -56,7 +56,7 @@ function writePrefs(sortBy: SortKey, groupBy: GroupKey) {
 
 function getGroupLabel(task: Task, groupBy: GroupKey): string {
   if (groupBy === 'status')   return STATUS_CONFIG[task.status as TaskStatus]?.label ?? task.status
-  if (groupBy === 'priority') return `P${task.priority} \u2014 ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
+  if (groupBy === 'priority') return `P${task.priority} - ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
   if (groupBy === 'label')    return task.label || 'Senza etichetta'
   return ''
 }
@@ -157,7 +157,7 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
                 {priorityConfig.label}
               </span>
               {task.label && (
-                <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{task.label}</span>
+                <span className="text-[10px] text-muted-foreground truncate max-w-20">{task.label}</span>
               )}
               {task.due_date && (
                 <span className={cn(

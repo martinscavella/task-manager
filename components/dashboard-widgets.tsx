@@ -23,9 +23,9 @@ const WIDGET_META: Record<string, { label: string; icon: React.ElementType; wide
   completed_week:  { label: 'Completati (settimana)', icon: CheckCircle2 },
   due_today:       { label: 'In scadenza oggi',       icon: CalendarClock },
   by_status:       { label: 'Per stato',             icon: Activity },
-  by_priority:     { label: 'Per priorit\u00e0',          icon: Flame },
+  by_priority:     { label: 'Per priorità',          icon: Flame },
   by_label:        { label: 'Per etichetta',         icon: Tag },
-  streak:          { label: 'Streak produttivit\u00e0',   icon: Star },
+  streak:          { label: 'Streak produttività',   icon: Star },
   weekly_chart:    { label: 'Carico settimanale',    icon: BarChart3, wide: true },
   next_due:        { label: 'Prossima scadenza',     icon: CalendarClock },
   quick_actions:   { label: 'Quick Actions',         icon: Zap },
@@ -218,7 +218,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
             {completedWeek.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1">
                 {completedWeek.slice(0, 4).map(t => (
-                  <span key={t.id} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full truncate max-w-[120px]">{t.title}</span>
+                  <span key={t.id} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full truncate max-w-30">{t.title}</span>
                 ))}
                 {completedWeek.length > 4 && <span className="text-xs text-muted-foreground">+{completedWeek.length - 4} altri</span>}
               </div>
@@ -268,7 +268,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
               return (
                 <li key={p}>
                   <div className="flex items-center justify-between text-xs mb-0.5">
-                    <span className={cn('font-medium', cfg?.color)}>P{p} \u2014 {cfg?.label}</span>
+                    <span className={cn('font-medium', cfg?.color)}>P{p} - {cfg?.label}</span>
                     <span className="text-muted-foreground">{count}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -310,7 +310,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
                 <div key={day} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex items-end justify-center" style={{ height: 40 }}>
                     <div
-                      className="w-full max-w-[28px] bg-primary/80 rounded-t-md transition-all"
+                      className="w-full max-w-7 bg-primary/80 rounded-t-md transition-all"
                       style={{ height: weeklyMax === 0 ? 2 : Math.max(2, (count / weeklyMax) * 40) }}
                     />
                   </div>

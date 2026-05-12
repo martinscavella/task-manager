@@ -227,7 +227,7 @@ export function MobileFab() {
         className={cn(
           'fixed z-50 md:hidden right-4 shadow-lg rounded-full size-14 flex items-center justify-center transition-all duration-200 active:scale-90',
           'bg-foreground text-background',
-          'bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+1rem)]'
+          'bottom-[calc(4rem+env(safe-area-inset-bottom,0)+1rem)]'
         )}
         aria-label="Nuovo task"
       >

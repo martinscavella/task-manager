@@ -130,7 +130,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
               />
             ) : (
               <h1 className={cn(
-                'text-2xl font-bold text-foreground break-words',
+                'text-2xl font-bold text-foreground wrap-break-word',
                 (isCompleted || isCancelled) && 'line-through text-muted-foreground'
               )}>
                 {task.title}
@@ -259,7 +259,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
 
             <Field label="Note">
               {editing ? (
-                <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-[80px] resize-y" placeholder="Note aggiuntive..." />
+                <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-20 resize-y" placeholder="Note aggiuntive..." />
               ) : task.note ? (
                 <p className="whitespace-pre-wrap leading-relaxed">{task.note}</p>
               ) : (
@@ -311,7 +311,7 @@ export function TaskDetailView({ task }: TaskDetailViewProps) {
               </Field>
               <Field label="Info aggiuntive">
                 {editing ? (
-                  <Textarea value={info} onChange={(e) => setInfo(e.target.value)} className="min-h-[80px] resize-y" placeholder="Stack trace, note tecniche..." />
+                  <Textarea value={info} onChange={(e) => setInfo(e.target.value)} className="min-h-20 resize-y" placeholder="Stack trace, note tecniche..." />
                 ) : task.info ? (
                   <p className="whitespace-pre-wrap leading-relaxed bg-muted/30 p-2 rounded text-xs">{task.info}</p>
                 ) : (

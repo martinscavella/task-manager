@@ -159,13 +159,13 @@ export function TaskList({ tasks }: TaskListProps) {
           const statusTasks = taskList.filter(t => t.status === status)
           if (statusFilter !== 'all' && status !== statusFilter) return null
           return (
-            <div key={status} className="flex-shrink-0 w-[76vw] sm:w-64 snap-start">
+            <div key={status} className="shrink-0 w-[76vw] sm:w-64 snap-start">
               <div className={cn('rounded-t-lg px-3 py-2', config.bgColor)}>
                 <h3 className={cn('font-medium text-sm', config.color)}>
                   {config.label} ({statusTasks.length})
                 </h3>
               </div>
-              <div className="bg-muted/30 rounded-b-lg p-2 min-h-[200px] space-y-2">
+              <div className="bg-muted/30 rounded-b-lg p-2 min-h-50 space-y-2">
                 {statusTasks.map(task => (
                   <TaskCard key={task.id} task={task} kanban />
                 ))}
@@ -274,7 +274,7 @@ export function TaskList({ tasks }: TaskListProps) {
       </div>
       <div className="hidden md:flex flex-wrap gap-3 items-center">
         <Select value={statusFilter} onValueChange={(v) => setFilterStatus(v === 'all' ? [] : [v])}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Stato" /></SelectTrigger>
+          <SelectTrigger className="w-45"><SelectValue placeholder="Stato" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti gli stati</SelectItem>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
@@ -283,32 +283,32 @@ export function TaskList({ tasks }: TaskListProps) {
           </SelectContent>
         </Select>
         <Select value={priorityFilter === 'all' ? 'all' : priorityFilter.toString()} onValueChange={(v) => setFilterPriority(v === 'all' ? [] : [v])}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Priorit\u00e0" /></SelectTrigger>
+          <SelectTrigger className="w-45"><SelectValue placeholder="Priorità" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutte le priorit\u00e0</SelectItem>
+            <SelectItem value="all">Tutte le priorità</SelectItem>
             {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
               <SelectItem key={key} value={key}>{config.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={settings.groupBy} onValueChange={(v) => setGroupBy(v as any)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-45">
             <FolderIcon className="size-4 mr-2" />
             <SelectValue placeholder="Raggruppa per" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Nessun raggruppamento</SelectItem>
             <SelectItem value="status">Per stato</SelectItem>
-            <SelectItem value="priority">Per priorit\u00e0</SelectItem>
+            <SelectItem value="priority">Per priorità</SelectItem>
             <SelectItem value="label">Per etichetta</SelectItem>
           </SelectContent>
         </Select>
         <Select value={settings.sortBy} onValueChange={(v) => setSortBy(v as any)}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Ordina per" /></SelectTrigger>
+          <SelectTrigger className="w-45"><SelectValue placeholder="Ordina per" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="created_at">Data creazione</SelectItem>
             <SelectItem value="due_date">Data scadenza</SelectItem>
-            <SelectItem value="priority">Priorit\u00e0</SelectItem>
+            <SelectItem value="priority">Priorità</SelectItem>
             <SelectItem value="title">Nome</SelectItem>
           </SelectContent>
         </Select>
@@ -348,7 +348,7 @@ export function TaskList({ tasks }: TaskListProps) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priorit\u00e0</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priorità</p>
                 <div className="flex flex-wrap gap-2">
                   {[{ value: 'all', label: 'Tutte' }, ...Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label }))].map(({ value, label }) => (
                     <button key={value} onClick={() => setFilterPriority(value === 'all' ? [] : [value])}
@@ -361,7 +361,7 @@ export function TaskList({ tasks }: TaskListProps) {
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Raggruppa per</p>
                 <div className="flex flex-wrap gap-2">
-                  {[{ value: 'none', label: 'Nessuno' }, { value: 'status', label: 'Stato' }, { value: 'priority', label: 'Priorit\u00e0' }, { value: 'label', label: 'Etichetta' }].map(({ value, label }) => (
+                  {[{ value: 'none', label: 'Nessuno' }, { value: 'status', label: 'Stato' }, { value: 'priority', label: 'Priorità' }, { value: 'label', label: 'Etichetta' }].map(({ value, label }) => (
                     <button key={value} onClick={() => setGroupBy(value as any)}
                       className={cn('px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                         settings.groupBy === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
@@ -372,7 +372,7 @@ export function TaskList({ tasks }: TaskListProps) {
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ordina per</p>
                 <div className="flex flex-wrap gap-2">
-                  {[{ value: 'created_at', label: 'Data creazione' }, { value: 'due_date', label: 'Scadenza' }, { value: 'priority', label: 'Priorit\u00e0' }, { value: 'title', label: 'Nome' }].map(({ value, label }) => (
+                  {[{ value: 'created_at', label: 'Data creazione' }, { value: 'due_date', label: 'Scadenza' }, { value: 'priority', label: 'Priorità' }, { value: 'title', label: 'Nome' }].map(({ value, label }) => (
                     <button key={value} onClick={() => setSortBy(value as any)}
                       className={cn('px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                         settings.sortBy === value ? 'bg-foreground text-background border-foreground' : 'bg-muted/40 border-border'
