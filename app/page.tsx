@@ -1,5 +1,5 @@
 import { getTasks, getTaskAnalytics } from '@/lib/queries'
-import { getProfile, getPreferences } from '@/lib/profile-actions'
+import { getProfile, getPreferences } from '@/lib/profile-queries'
 import { createClient } from '@/lib/supabase/server'
 import { HomeClient } from '@/components/home-client'
 
@@ -10,14 +10,12 @@ function getGreeting() {
   return 'Buonasera'
 }
 
-// Rimuoviamo force-dynamic: le mutation invalidano i tag, Next.js serve dalla cache
 export const dynamic = 'auto'
 
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // tasks + analytics in parallelo; analytics non fa query aggiuntive (usa tasks già in cache)
   const [tasks, analytics, profile, preferences] = await Promise.all([
     getTasks(),
     getTaskAnalytics(),
