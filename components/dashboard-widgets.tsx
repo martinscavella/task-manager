@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { upsertPreferences } from '@/lib/profile-actions'
 import { createTask, updateTaskStatus } from '@/lib/actions'
-import type { UserPreferences } from '@/lib/profile-actions'
+import type { UserPreferences } from '@/lib/profile-queries'
 import type { Task, TaskStatus, TaskPriority } from '@/lib/types'
 import {
   BarChart3, AlertCircle, Clock, CheckCircle2, GripVertical, EyeOff,
@@ -297,8 +297,8 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
-               streak < 3 ? 'Buon inizio, continua cos\u00ec!' :
-               streak < 7 ? 'Stai andando forte! \ud83d\udcaa' : 'Sei inarrestabile! \ud83d\ude80'}
+               streak < 3 ? 'Buon inizio, continua così!' :
+               streak < 7 ? 'Stai andando forte! 💪' : 'Sei inarrestabile! 🚀'}
             </p>
           </div>
         )
