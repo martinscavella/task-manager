@@ -23,9 +23,9 @@ const WIDGET_META: Record<string, { label: string; icon: React.ElementType; wide
   completed_week:  { label: 'Completati (settimana)', icon: CheckCircle2 },
   due_today:       { label: 'In scadenza oggi',       icon: CalendarClock },
   by_status:       { label: 'Per stato',              icon: Activity },
-  by_priority:     { label: 'Per priorit\u00e0',      icon: Flame },
+  by_priority:     { label: 'Per priorità',           icon: Flame },
   by_label:        { label: 'Per etichetta',          icon: Tag },
-  streak:          { label: 'Streak produttivit\u00e0', icon: Star },
+  streak:          { label: 'Streak produttività',    icon: Star },
   weekly_chart:    { label: 'Carico settimanale',     icon: BarChart3, wide: true },
   next_due:        { label: 'Prossima scadenza',      icon: CalendarClock },
   quick_actions:   { label: 'Quick Actions',          icon: Zap },
@@ -204,7 +204,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
         )
       case 'overdue':
         return overdueTasks.length === 0
-          ? <p className="text-sm text-muted-foreground">Nessun task scaduto \uD83C\uDF89</p>
+          ? <p className="text-sm text-muted-foreground">Nessun task scaduto 🎉</p>
           : <ul className="space-y-1.5">
             {overdueTasks.slice(0, 5).map(t => (
               <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
@@ -252,7 +252,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
         )
       case 'due_today':
         return dueTodayTasks.length === 0
-          ? <p className="text-sm text-muted-foreground">Nessun task in scadenza oggi \u2705</p>
+          ? <p className="text-sm text-muted-foreground">Nessun task in scadenza oggi ✅</p>
           : <ul className="space-y-1.5">
             {dueTodayTasks.map(t => (
               <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
@@ -294,7 +294,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
                 <li key={p}>
                   <div className="flex items-center justify-between text-xs mb-0.5">
                     <span className={cn('font-medium', cfg?.color)}>
-                      {'P'}{p}{' \u2013 '}{cfg?.label}
+                      P{p} – {cfg?.label}
                     </span>
                     <span className="text-muted-foreground">{count}</span>
                   </div>
@@ -321,14 +321,14 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
             <div className="flex items-end gap-2">
               <p className="text-3xl font-bold" suppressHydrationWarning>{streak}</p>
               <p className="text-sm text-muted-foreground mb-1" suppressHydrationWarning>
-                giorn{streak === 1 ? 'o' : 'i'} consecutivi \uD83D\uDD25
+                giorn{streak === 1 ? 'o' : 'i'} consecutivi 🔥
               </p>
             </div>
             <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
               {!mounted ? '' :
                streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
-               streak < 3 ? 'Buon inizio, continua cos\u00ec!' :
-               streak < 7 ? 'Stai andando forte! \uD83D\uDCAA' : 'Sei inarrestabile! \uD83D\uDE80'}
+               streak < 3 ? 'Buon inizio, continua così!' :
+               streak < 7 ? 'Stai andando forte! 💪' : 'Sei inarrestabile! 🚀'}
             </p>
           </div>
         )
