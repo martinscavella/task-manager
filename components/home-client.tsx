@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { TaskList } from '@/components/task-list'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
-import { DashboardWidgets } from '@/components/dashboard-widgets'
 import { MobileNav } from '@/components/mobile-nav'
 import { MobileFab } from '@/components/mobile-fab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -11,6 +11,13 @@ import { BarChart3, ListTodo, LayoutDashboard } from 'lucide-react'
 import { UserMenuButton } from '@/components/user-menu-button'
 import type { Task } from '@/lib/types'
 import type { UserPreferences } from '@/lib/profile-actions'
+
+// DashboardWidgets dipende da Date.now() e dalla locale del browser — va escluso dal SSR
+// per evitare hydration mismatch causato da valori data diversi tra server e client.
+const DashboardWidgets = dynamic(
+  () => import('@/components/dashboard-widgets').then(m => ({ default: m.DashboardWidgets })),
+  { ssr: false }
+)
 
 const TAB_KEY = 'home-active-tab'
 const VALID_TABS = ['dashboard', 'tasks', 'analytics'] as const

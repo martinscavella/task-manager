@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { upsertPreferences } from '@/lib/profile-actions'
 import { createTask } from '@/lib/actions'
@@ -70,6 +70,17 @@ function last7Days(): string[] {
   })
 }
 
+function MiniBar({ value, max, color = 'bg-primary' }: { value: number; max: number; color?: string }) {
+  const pct = max === 0 ? 0 : Math.round((value / max) * 100)
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="w-6 bg-muted rounded-full overflow-hidden" style={{ height: 48 }}>
+        <div className={cn('w-full rounded-full transition-all', color)} style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   tasks: Task[]
   preferences: UserPreferences
@@ -77,13 +88,8 @@ interface Props {
   onTabChange: (tab: string) => void
 }
 
-function WidgetSkeleton() {
-  return <div className="h-16 rounded-lg bg-muted/40 animate-pulse" />
-}
-
 export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }: Props) {
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [widgets, setWidgets] = useState<string[]>(
     preferences.dashboard_widgets?.length ? preferences.dashboard_widgets : DEFAULT_WIDGETS
   )
@@ -93,9 +99,8 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
   const [quickTitle, setQuickTitle] = useState('')
   const [isPending, startTransition] = useTransition()
 
-  useEffect(() => { setMounted(true) }, [])
-
-  // All date-dependent values are only computed after mount
+  // Questo componente viene caricato solo lato client (ssr:false in home-client.tsx),
+  // quindi possiamo usare Date direttamente senza rischi di hydration mismatch.
   const today = todayStart()
   const tomorrow = tomorrowStart()
   const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
@@ -177,12 +182,6 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
   }
 
   const renderWidget = (id: string) => {
-    // Widgets that depend on current date show a skeleton until mounted
-    const dateDependentWidgets = ['overdue', 'due_today', 'completed_week', 'streak', 'weekly_chart', 'next_due', 'stats']
-    if (!mounted && dateDependentWidgets.includes(id)) {
-      return <WidgetSkeleton />
-    }
-
     switch (id) {
       case 'stats':
         return (
