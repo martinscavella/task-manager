@@ -70,22 +70,15 @@ function last7Days(): string[] {
   })
 }
 
-function MiniBar({ value, max, color = 'bg-primary' }: { value: number; max: number; color?: string }) {
-  const pct = max === 0 ? 0 : Math.round((value / max) * 100)
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="w-6 bg-muted rounded-full overflow-hidden" style={{ height: 48 }}>
-        <div className={cn('w-full rounded-full transition-all', color)} style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }} />
-      </div>
-    </div>
-  )
-}
-
 interface Props {
   tasks: Task[]
   preferences: UserPreferences
   firstName: string
   onTabChange: (tab: string) => void
+}
+
+function WidgetSkeleton() {
+  return <div className="h-16 rounded-lg bg-muted/40 animate-pulse" />
 }
 
 export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }: Props) {
@@ -102,22 +95,21 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
 
   useEffect(() => { setMounted(true) }, [])
 
-  const today = mounted ? todayStart() : new Date(0)
-  const tomorrow = mounted ? tomorrowStart() : new Date(0)
-  const weekAgo = mounted ? new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000) : new Date(0)
+  // All date-dependent values are only computed after mount
+  const today = todayStart()
+  const tomorrow = tomorrowStart()
+  const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
 
   const activeTasks = tasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
-  const overdueTasks = mounted ? activeTasks.filter(t => t.due_date && new Date(t.due_date) < today) : []
-  const dueTodayTasks = mounted ? activeTasks.filter(t => {
+  const overdueTasks = activeTasks.filter(t => t.due_date && new Date(t.due_date) < today)
+  const dueTodayTasks = activeTasks.filter(t => {
     if (!t.due_date) return false
     const d = new Date(t.due_date)
     return d >= today && d < tomorrow
-  }) : []
+  })
   const recentTasks = [...tasks].slice(0, 6)
-  const completedWeek = mounted
-    ? tasks.filter(t => t.completed_at && new Date(t.completed_at) >= weekAgo)
-    : []
-  const streak = mounted ? computeStreak(tasks) : 0
+  const completedWeek = tasks.filter(t => t.completed_at && new Date(t.completed_at) >= weekAgo)
+  const streak = computeStreak(tasks)
 
   const byStatus = Object.entries(
     activeTasks.reduce<Record<string, number>>((acc, t) => {
@@ -138,7 +130,7 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
     }, {})
   ).sort((a, b) => b[1] - a[1]).slice(0, 6)
 
-  const days7 = mounted ? last7Days() : []
+  const days7 = last7Days()
   const weeklyData = days7.map(day => ({
     day: new Date(day).toLocaleDateString('it-IT', { weekday: 'short' }),
     count: tasks.filter(t => t.completed_at && new Date(t.completed_at).toDateString() === day).length,
@@ -185,6 +177,12 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
   }
 
   const renderWidget = (id: string) => {
+    // Widgets that depend on current date show a skeleton until mounted
+    const dateDependentWidgets = ['overdue', 'due_today', 'completed_week', 'streak', 'weekly_chart', 'next_due', 'stats']
+    if (!mounted && dateDependentWidgets.includes(id)) {
+      return <WidgetSkeleton />
+    }
+
     switch (id) {
       case 'stats':
         return (
@@ -210,8 +208,8 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
               <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
                 <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
                 <span className="truncate text-red-600 font-medium flex-1 min-w-0">{t.title}</span>
-                <span className="ml-auto text-xs text-muted-foreground shrink-0" suppressHydrationWarning>
-                  {mounted ? new Date(t.due_date!).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : ''}
+                <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                  {new Date(t.due_date!).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                 </span>
               </li>
             ))}
@@ -234,12 +232,12 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
       case 'completed_week':
         return (
           <div>
-            <p className="text-3xl font-bold" suppressHydrationWarning>{completedWeek.length}</p>
+            <p className="text-3xl font-bold">{completedWeek.length}</p>
             <p className="text-xs text-muted-foreground mt-1">task completati negli ultimi 7 giorni</p>
-            {mounted && completedWeek.length > 0 && (
+            {completedWeek.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1">
                 {completedWeek.slice(0, 4).map(t => (
-                  <span key={t.id} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full truncate max-w-30">
+                  <span key={t.id} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full truncate max-w-[7.5rem]">
                     {t.title}
                   </span>
                 ))}
@@ -319,14 +317,13 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
         return (
           <div>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-bold" suppressHydrationWarning>{streak}</p>
-              <p className="text-sm text-muted-foreground mb-1" suppressHydrationWarning>
+              <p className="text-3xl font-bold">{streak}</p>
+              <p className="text-sm text-muted-foreground mb-1">
                 giorn{streak === 1 ? 'o' : 'i'} consecutivi 🔥
               </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
-              {!mounted ? '' :
-               streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
+            <p className="text-xs text-muted-foreground mt-1">
+              {streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
                streak < 3 ? 'Buon inizio, continua così!' :
                streak < 7 ? 'Stai andando forte! 💪' : 'Sei inarrestabile! 🚀'}
             </p>
@@ -367,10 +364,8 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
               </div>
               <p className="text-xs text-muted-foreground">
                 Scadenza:{' '}
-                <span className="font-medium text-foreground" suppressHydrationWarning>
-                  {mounted
-                    ? new Date(nextDue.due_date!).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
-                    : ''}
+                <span className="font-medium text-foreground">
+                  {new Date(nextDue.due_date!).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </span>
               </p>
             </div>
