@@ -2,131 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { unstable_cache } from 'next/cache'
 import { redirect } from 'next/navigation'
-import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from './types'
+import type { CreateTaskInput, UpdateTaskInput, TaskStatus } from './types'
 
-// ─── cached data fetchers ────────────────────────────────────────────────────
-// Ogni funzione cacheable viene wrappata in unstable_cache con tag specifici.
-// Le mutation invalidano solo i tag necessari.
-
-async function _getTasks(userId: string): Promise<Task[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-  if (error) { console.error('getTasks:', error); return [] }
-  return data as Task[]
-}
-
-async function _getTaskById(id: string): Promise<Task | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('id', id)
-    .single()
-  if (error || !data) { console.error('getTaskById:', error); return null }
-  return data as Task
-}
-
-// Sidebar: seleziona solo i campi necessari per la lista
-async function _getTasksSidebar(userId: string): Promise<Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'label' | 'due_date'>[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('id,title,status,priority,label,due_date')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-  if (error) { console.error('getTasksSidebar:', error); return [] }
-  return data as Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'label' | 'due_date'>[]
-}
-
-// ─── public API ──────────────────────────────────────────────────────────────
-
-export async function getTasks(): Promise<Task[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-  const cached = unstable_cache(
-    () => _getTasks(user.id),
-    [`tasks-list-${user.id}`],
-    { tags: [`tasks-${user.id}`], revalidate: 30 }
-  )
-  return cached()
-}
-
-export async function getTasksSidebar(): Promise<Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'label' | 'due_date'>[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-  const cached = unstable_cache(
-    () => _getTasksSidebar(user.id),
-    [`tasks-sidebar-${user.id}`],
-    { tags: [`tasks-${user.id}`], revalidate: 30 }
-  )
-  return cached()
-}
-
-export async function getTaskById(id: string): Promise<Task | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const cached = unstable_cache(
-    () => _getTaskById(id),
-    [`task-${id}`],
-    { tags: [`task-${id}`, `tasks-${user.id}`], revalidate: 30 }
-  )
-  return cached()
-}
-
-// Analytics calcolate in-process dai task già in cache (zero query aggiuntive)
-export async function getTaskAnalytics() {
-  const tasks = await getTasks()
-
-  const now = new Date()
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-
-  const byStatus: Record<string, number> = {}
-  const byPriority: Record<number, number> = {}
-  let completedThisWeek = 0
-  let completedThisMonth = 0
-  let overdue = 0
-  let totalCompletionTime = 0
-  let completedCount = 0
-
-  for (const task of tasks) {
-    byStatus[task.status] = (byStatus[task.status] || 0) + 1
-    byPriority[task.priority] = (byPriority[task.priority] || 0) + 1
-    if (task.completed_at) {
-      const completedDate = new Date(task.completed_at)
-      if (completedDate >= weekAgo) completedThisWeek++
-      if (completedDate >= monthAgo) completedThisMonth++
-      totalCompletionTime += completedDate.getTime() - new Date(task.created_at).getTime()
-      completedCount++
-    }
-    if (task.due_date && task.status !== 'COMPLETED' && task.status !== 'CANCELLED') {
-      if (new Date(task.due_date) < now) overdue++
-    }
-  }
-
-  return {
-    total: tasks.length,
-    byStatus,
-    byPriority,
-    completedThisWeek,
-    completedThisMonth,
-    overdue,
-    avgCompletionTime: completedCount > 0
-      ? Math.round(totalCompletionTime / completedCount / (1000 * 60 * 60 * 24))
-      : 0,
-  }
-}
-
-// ─── mutations ───────────────────────────────────────────────────────────────
+// Re-export read functions so existing imports keep working
+export { getTasks, getTaskById, getTasksSidebar, getTaskAnalytics } from './queries'
 
 async function getUserId(): Promise<string | null> {
   const supabase = await createClient()
@@ -177,7 +57,6 @@ export async function updateTask(input: UpdateTaskInput): Promise<{ success: boo
 
   if (error) { console.error('updateTask:', error); return { success: false, error: error.message } }
 
-  // Invalida il tag del singolo task + la lista
   revalidateTag(`task-${id}`)
   revalidateTag(`tasks-${userId}`)
   revalidatePath(`/tasks/${id}`, 'page')
