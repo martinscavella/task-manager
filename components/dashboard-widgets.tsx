@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { upsertPreferences } from '@/lib/profile-actions'
-import { createTask, updateTaskStatus } from '@/lib/actions'
+import { createTask } from '@/lib/actions'
 import type { UserPreferences } from '@/lib/profile-queries'
 import type { Task, TaskStatus, TaskPriority } from '@/lib/types'
 import {
@@ -22,29 +22,34 @@ const WIDGET_META: Record<string, { label: string; icon: React.ElementType; wide
   recent:          { label: 'Task recenti',           icon: Clock },
   completed_week:  { label: 'Completati (settimana)', icon: CheckCircle2 },
   due_today:       { label: 'In scadenza oggi',       icon: CalendarClock },
-  by_status:       { label: 'Per stato',             icon: Activity },
-  by_priority:     { label: 'Per priorità',          icon: Flame },
-  by_label:        { label: 'Per etichetta',         icon: Tag },
-  streak:          { label: 'Streak produttività',   icon: Star },
-  weekly_chart:    { label: 'Carico settimanale',    icon: BarChart3, wide: true },
-  next_due:        { label: 'Prossima scadenza',     icon: CalendarClock },
-  quick_actions:   { label: 'Quick Actions',         icon: Zap },
+  by_status:       { label: 'Per stato',              icon: Activity },
+  by_priority:     { label: 'Per priorit\u00e0',      icon: Flame },
+  by_label:        { label: 'Per etichetta',          icon: Tag },
+  streak:          { label: 'Streak produttivit\u00e0', icon: Star },
+  weekly_chart:    { label: 'Carico settimanale',     icon: BarChart3, wide: true },
+  next_due:        { label: 'Prossima scadenza',      icon: CalendarClock },
+  quick_actions:   { label: 'Quick Actions',          icon: Zap },
 }
 
 const DEFAULT_WIDGETS = ['stats', 'overdue', 'recent', 'completed_week']
 
 function todayStart() {
-  const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 function tomorrowStart() {
-  const d = todayStart(); d.setDate(d.getDate() + 1); return d
+  const d = todayStart()
+  d.setDate(d.getDate() + 1)
+  return d
 }
 
 function computeStreak(tasks: Task[]): number {
   const completed = tasks
     .filter(t => t.completed_at)
     .map(t => new Date(t.completed_at!).toDateString())
-  const uniqueDays = [...new Set(completed)].map(d => new Date(d)).sort((a, b) => b.getTime() - a.getTime())
+  const uniqueDays = [...new Set(completed)]
+    .map(d => new Date(d))
+    .sort((a, b) => b.getTime() - a.getTime())
   if (!uniqueDays.length) return 0
   let streak = 0
   const check = new Date(todayStart())
@@ -59,7 +64,9 @@ function computeStreak(tasks: Task[]): number {
 
 function last7Days(): string[] {
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(todayStart()); d.setDate(d.getDate() - (6 - i)); return d.toDateString()
+    const d = new Date(todayStart())
+    d.setDate(d.getDate() - (6 - i))
+    return d.toDateString()
   })
 }
 
@@ -83,31 +90,40 @@ interface Props {
 
 export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }: Props) {
   const router = useRouter()
-  const [widgets, setWidgets] = useState<string[]>(preferences.dashboard_widgets?.length ? preferences.dashboard_widgets : DEFAULT_WIDGETS)
+  const [mounted, setMounted] = useState(false)
+  const [widgets, setWidgets] = useState<string[]>(
+    preferences.dashboard_widgets?.length ? preferences.dashboard_widgets : DEFAULT_WIDGETS
+  )
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
-
   const [quickTitle, setQuickTitle] = useState('')
   const [isPending, startTransition] = useTransition()
 
-  const today = todayStart()
-  const tomorrow = tomorrowStart()
-  const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
+  useEffect(() => { setMounted(true) }, [])
+
+  const today = mounted ? todayStart() : new Date(0)
+  const tomorrow = mounted ? tomorrowStart() : new Date(0)
+  const weekAgo = mounted ? new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000) : new Date(0)
 
   const activeTasks = tasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
-  const overdueTasks = activeTasks.filter(t => t.due_date && new Date(t.due_date) < today)
-  const dueTodayTasks = activeTasks.filter(t => {
+  const overdueTasks = mounted ? activeTasks.filter(t => t.due_date && new Date(t.due_date) < today) : []
+  const dueTodayTasks = mounted ? activeTasks.filter(t => {
     if (!t.due_date) return false
     const d = new Date(t.due_date)
     return d >= today && d < tomorrow
-  })
+  }) : []
   const recentTasks = [...tasks].slice(0, 6)
-  const completedWeek = tasks.filter(t => t.completed_at && new Date(t.completed_at) >= weekAgo)
-  const streak = computeStreak(tasks)
+  const completedWeek = mounted
+    ? tasks.filter(t => t.completed_at && new Date(t.completed_at) >= weekAgo)
+    : []
+  const streak = mounted ? computeStreak(tasks) : 0
 
   const byStatus = Object.entries(
-    activeTasks.reduce<Record<string, number>>((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc }, {})
+    activeTasks.reduce<Record<string, number>>((acc, t) => {
+      acc[t.status] = (acc[t.status] || 0) + 1
+      return acc
+    }, {})
   ).sort((a, b) => b[1] - a[1])
 
   const byPriority = ([1, 2, 3, 4] as TaskPriority[]).map(p => ({
@@ -117,11 +133,12 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
   const byLabel = Object.entries(
     tasks.reduce<Record<string, number>>((acc, t) => {
       const l = t.label || 'Nessuna'
-      acc[l] = (acc[l] || 0) + 1; return acc
+      acc[l] = (acc[l] || 0) + 1
+      return acc
     }, {})
   ).sort((a, b) => b[1] - a[1]).slice(0, 6)
 
-  const days7 = last7Days()
+  const days7 = mounted ? last7Days() : []
   const weeklyData = days7.map(day => ({
     day: new Date(day).toLocaleDateString('it-IT', { weekday: 'short' }),
     count: tasks.filter(t => t.completed_at && new Date(t.completed_at).toDateString() === day).length,
@@ -157,7 +174,11 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
   const handleQuickCreate = () => {
     if (!quickTitle.trim()) return
     startTransition(async () => {
-      await createTask({ title: quickTitle.trim(), priority: 3, status: 'TO_BE_STARTED', label: null, due_date: null, note: null, jira_url: null, jira_key: null, code: null, info: null })
+      await createTask({
+        title: quickTitle.trim(), priority: 3, status: 'TO_BE_STARTED',
+        label: null, due_date: null, note: null, jira_url: null,
+        jira_key: null, code: null, info: null,
+      })
       setQuickTitle('')
       router.refresh()
     })
@@ -183,14 +204,14 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
         )
       case 'overdue':
         return overdueTasks.length === 0
-          ? <p className="text-sm text-muted-foreground">Nessun task scaduto 🎉</p>
+          ? <p className="text-sm text-muted-foreground">Nessun task scaduto \uD83C\uDF89</p>
           : <ul className="space-y-1.5">
             {overdueTasks.slice(0, 5).map(t => (
               <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
                 <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
                 <span className="truncate text-red-600 font-medium flex-1 min-w-0">{t.title}</span>
-                <span className="ml-auto text-xs text-muted-foreground shrink-0">
-                  {new Date(t.due_date!).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                <span className="ml-auto text-xs text-muted-foreground shrink-0" suppressHydrationWarning>
+                  {mounted ? new Date(t.due_date!).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : ''}
                 </span>
               </li>
             ))}
@@ -213,21 +234,25 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
       case 'completed_week':
         return (
           <div>
-            <p className="text-3xl font-bold">{completedWeek.length}</p>
+            <p className="text-3xl font-bold" suppressHydrationWarning>{completedWeek.length}</p>
             <p className="text-xs text-muted-foreground mt-1">task completati negli ultimi 7 giorni</p>
-            {completedWeek.length > 0 && (
+            {mounted && completedWeek.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1">
                 {completedWeek.slice(0, 4).map(t => (
-                  <span key={t.id} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full truncate max-w-30">{t.title}</span>
+                  <span key={t.id} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full truncate max-w-30">
+                    {t.title}
+                  </span>
                 ))}
-                {completedWeek.length > 4 && <span className="text-xs text-muted-foreground">+{completedWeek.length - 4} altri</span>}
+                {completedWeek.length > 4 && (
+                  <span className="text-xs text-muted-foreground">+{completedWeek.length - 4} altri</span>
+                )}
               </div>
             )}
           </div>
         )
       case 'due_today':
         return dueTodayTasks.length === 0
-          ? <p className="text-sm text-muted-foreground">Nessun task in scadenza oggi ✅</p>
+          ? <p className="text-sm text-muted-foreground">Nessun task in scadenza oggi \u2705</p>
           : <ul className="space-y-1.5">
             {dueTodayTasks.map(t => (
               <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
@@ -268,7 +293,9 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
               return (
                 <li key={p}>
                   <div className="flex items-center justify-between text-xs mb-0.5">
-                    <span className={cn('font-medium', cfg?.color)}>P{p} - {cfg?.label}</span>
+                    <span className={cn('font-medium', cfg?.color)}>
+                      {'P'}{p}{' \u2013 '}{cfg?.label}
+                    </span>
                     <span className="text-muted-foreground">{count}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -292,13 +319,16 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
         return (
           <div>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-bold">{streak}</p>
-              <p className="text-sm text-muted-foreground mb-1">giorn{streak === 1 ? 'o' : 'i'} consecutivi 🔥</p>
+              <p className="text-3xl font-bold" suppressHydrationWarning>{streak}</p>
+              <p className="text-sm text-muted-foreground mb-1" suppressHydrationWarning>
+                giorn{streak === 1 ? 'o' : 'i'} consecutivi \uD83D\uDD25
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
-               streak < 3 ? 'Buon inizio, continua così!' :
-               streak < 7 ? 'Stai andando forte! 💪' : 'Sei inarrestabile! 🚀'}
+            <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
+              {!mounted ? '' :
+               streak === 0 ? 'Completa un task oggi per iniziare lo streak!' :
+               streak < 3 ? 'Buon inizio, continua cos\u00ec!' :
+               streak < 7 ? 'Stai andando forte! \uD83D\uDCAA' : 'Sei inarrestabile! \uD83D\uDE80'}
             </p>
           </div>
         )
@@ -336,8 +366,11 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Scadenza: <span className="font-medium text-foreground">
-                  {new Date(nextDue.due_date!).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                Scadenza:{' '}
+                <span className="font-medium text-foreground" suppressHydrationWarning>
+                  {mounted
+                    ? new Date(nextDue.due_date!).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+                    : ''}
                 </span>
               </p>
             </div>
@@ -345,7 +378,6 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
       case 'quick_actions':
         return (
           <div className="space-y-3">
-            {/* Quick create */}
             <form onSubmit={e => { e.preventDefault(); handleQuickCreate() }} className="flex gap-2">
               <Input
                 value={quickTitle}
@@ -358,7 +390,6 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
                 <Plus className="size-3.5" />
               </Button>
             </form>
-            {/* Azioni rapide — usano onTabChange per navigare senza reload */}
             <div className="grid grid-cols-2 gap-2">
               {([
                 { label: 'Tutti i task', tab: 'tasks', icon: ArrowRight },
@@ -404,7 +435,11 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
         <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-muted/40 border border-dashed">
           <span className="text-xs font-medium text-muted-foreground">Aggiungi widget:</span>
           {hiddenWidgets.map(id => (
-            <button key={id} onClick={() => addWidget(id)} className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-muted transition-colors flex items-center gap-1">
+            <button
+              key={id}
+              onClick={() => addWidget(id)}
+              className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-muted transition-colors flex items-center gap-1"
+            >
               <Plus className="size-3" /> {WIDGET_META[id]?.label}
             </button>
           ))}
@@ -436,7 +471,10 @@ export function DashboardWidgets({ tasks, preferences, firstName, onTabChange }:
                   <span className="text-sm font-medium truncate">{meta.label}</span>
                 </div>
                 {editMode && (
-                  <button onClick={() => removeWidget(id)} className="text-muted-foreground hover:text-destructive transition-colors shrink-0 ml-2">
+                  <button
+                    onClick={() => removeWidget(id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0 ml-2"
+                  >
                     <EyeOff className="size-3.5" />
                   </button>
                 )}
