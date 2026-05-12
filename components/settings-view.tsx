@@ -15,7 +15,8 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Check, UserCircle, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { upsertProfile, upsertPreferences, type Profile, type UserPreferences } from '@/lib/profile-actions'
+import { upsertProfile, upsertPreferences } from '@/lib/profile-actions'
+import type { Profile, UserPreferences } from '@/lib/profile-queries'
 
 const TIMEZONES = [
   'Europe/Rome', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -99,7 +100,6 @@ export function SettingsView({ email, profile: initialProfile, preferences: init
 
   return (
     <div>
-      {/* Nav: tab strip su mobile, sidebar su desktop */}
       <div className="flex md:hidden gap-1 mb-6 border-b pb-0">
         {(['profile', 'app'] as const).map((id) => {
           const Icon = id === 'profile' ? UserCircle : SlidersHorizontal
@@ -122,7 +122,6 @@ export function SettingsView({ email, profile: initialProfile, preferences: init
       </div>
 
       <div className="flex gap-8">
-        {/* Sidebar desktop */}
         <nav className="hidden md:block w-48 shrink-0 space-y-1">
           {(['profile', 'app'] as const).map((id) => {
             const Icon = id === 'profile' ? UserCircle : SlidersHorizontal
