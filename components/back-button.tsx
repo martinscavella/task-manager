@@ -9,21 +9,23 @@ interface BackButtonProps {
   label?: string
   className?: string
   fallback?: string
+  /** Se true, usa router.push(fallback) direttamente invece di router.back() */
+  forcePush?: boolean
 }
 
 export function BackButton({
   label = 'Indietro',
   className,
   fallback = '/',
+  forcePush = false,
 }: BackButtonProps) {
   const router = useRouter()
 
   const handleBack = () => {
-    // Se c'è storia nel browser, torna indietro; altrimenti vai al fallback
-    if (window.history.length > 1) {
-      router.back()
-    } else {
+    if (forcePush || window.history.length <= 1) {
       router.push(fallback)
+    } else {
+      router.back()
     }
   }
 
