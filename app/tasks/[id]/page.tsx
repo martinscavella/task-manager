@@ -1,11 +1,9 @@
 import { Suspense } from 'react'
 import { getTaskById, getTasks } from '@/lib/actions'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
 import { TaskDetailView } from '@/components/task-detail-view'
 import { TaskDetailSidebar } from '@/components/task-detail-sidebar'
+import { BackButton } from '@/components/back-button'
 import TaskDetailLoading from './loading'
 
 export const dynamic = 'force-dynamic'
@@ -27,12 +25,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
         {/* Sidebar sinistra: lista task */}
         <aside className="hidden lg:flex flex-col w-64 xl:w-72 border-r bg-muted/20 shrink-0">
           <div className="flex items-center gap-2 px-4 py-4 border-b">
-            <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-1 text-muted-foreground hover:text-foreground h-8">
-              <Link href="/">
-                <ArrowLeft className="size-3.5" />
-                Task
-              </Link>
-            </Button>
+            <BackButton label="Task" className="-ml-1 h-8 gap-1.5 text-muted-foreground hover:text-foreground" />
           </div>
           <TaskDetailSidebar tasks={tasks} currentId={id} />
         </aside>
@@ -47,17 +40,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           <div className="mx-auto max-w-4xl px-4 pb-8 lg:py-8">
             {/* Mobile back button */}
             <div className="mb-6 lg:hidden">
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
-              >
-                <Link href="/">
-                  <ArrowLeft className="size-4" />
-                  Torna ai task
-                </Link>
-              </Button>
+              <BackButton label="Torna ai task" />
             </div>
             <Suspense fallback={<TaskDetailLoading />}>
               <TaskDetailData id={id} />
