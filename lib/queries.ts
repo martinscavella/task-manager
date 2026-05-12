@@ -1,84 +1,63 @@
-// Data fetchers con unstable_cache.
-// NON marcato 'use server' — unstable_cache non è compatibile con Server Actions.
-// Usare questo file solo da Server Components e da actions.ts per le read.
+// Data fetchers per Server Components.
+// NON marcato 'use server'.
+//
+// NOTA: unstable_cache NON funziona qui perche' createClient() chiama cookies()
+// che non e' disponibile nel contesto isolato di unstable_cache.
+// Usiamo cache() di React che deduplica le chiamate nella stessa request.
 
 import { createClient } from '@/lib/supabase/server'
-import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
 import type { Task } from './types'
 
 type TaskSummary = Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'label' | 'due_date'>
 
-async function getUserId(): Promise<string | null> {
+const getAuthUser = cache(async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  return user?.id ?? null
-}
+  return user
+})
 
-const fetchTasksCached = (userId: string) =>
-  unstable_cache(
-    async () => {
-      const supabase = await createClient()
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-      if (error) { console.error('fetchTasks:', error); return [] }
-      return data as Task[]
-    },
-    [`tasks-list-${userId}`],
-    { tags: [`tasks-${userId}`], revalidate: 30 }
-  )()
+export const getTasks = cache(async (): Promise<Task[]> => {
+  const user = await getAuthUser()
+  if (!user) return []
 
-const fetchTaskByIdCached = (id: string, userId: string) =>
-  unstable_cache(
-    async () => {
-      const supabase = await createClient()
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', id)
-        .single()
-      if (error || !data) { console.error('fetchTaskById:', error); return null }
-      return data as Task
-    },
-    [`task-${id}`],
-    { tags: [`task-${id}`, `tasks-${userId}`], revalidate: 30 }
-  )()
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+  if (error) { console.error('fetchTasks:', error); return [] }
+  return data as Task[]
+})
 
-const fetchTasksSidebarCached = (userId: string) =>
-  unstable_cache(
-    async () => {
-      const supabase = await createClient()
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id,title,status,priority,label,due_date')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-      if (error) { console.error('fetchTasksSidebar:', error); return [] }
-      return data as TaskSummary[]
-    },
-    [`tasks-sidebar-${userId}`],
-    { tags: [`tasks-${userId}`], revalidate: 30 }
-  )()
+export const getTaskById = cache(async (id: string): Promise<Task | null> => {
+  const user = await getAuthUser()
+  if (!user) return null
 
-export async function getTasks(): Promise<Task[]> {
-  const userId = await getUserId()
-  if (!userId) return []
-  return fetchTasksCached(userId)
-}
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error || !data) { console.error('fetchTaskById:', error); return null }
+  return data as Task
+})
 
-export async function getTaskById(id: string): Promise<Task | null> {
-  const userId = await getUserId()
-  if (!userId) return null
-  return fetchTaskByIdCached(id, userId)
-}
+export const getTasksSidebar = cache(async (): Promise<TaskSummary[]> => {
+  const user = await getAuthUser()
+  if (!user) return []
 
-export async function getTasksSidebar(): Promise<TaskSummary[]> {
-  const userId = await getUserId()
-  if (!userId) return []
-  return fetchTasksSidebarCached(userId)
-}
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id,title,status,priority,label,due_date')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+  if (error) { console.error('fetchTasksSidebar:', error); return [] }
+  return data as TaskSummary[]
+})
 
 export async function getTaskAnalytics() {
   const tasks = await getTasks()
