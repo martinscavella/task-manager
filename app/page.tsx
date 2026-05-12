@@ -1,4 +1,4 @@
-import { getTasks, getTaskAnalytics } from '@/lib/actions'
+import { getTasks, getTaskAnalytics } from '@/lib/queries'
 import { getProfile, getPreferences } from '@/lib/profile-actions'
 import { createClient } from '@/lib/supabase/server'
 import { HomeClient } from '@/components/home-client'
