@@ -5,9 +5,6 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { CreateTaskInput, UpdateTaskInput, TaskStatus } from './types'
 
-// Re-export read functions so existing imports keep working
-export { getTasks, getTaskById, getTasksSidebar, getTaskAnalytics } from './queries'
-
 async function getUserId(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
