@@ -2,6 +2,8 @@
 // NON marcato 'use server' — usare solo da Server Components.
 
 import { createClient } from '@/lib/supabase/server'
+import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 
 export interface Profile {
   first_name: string | null
@@ -33,30 +35,50 @@ export const DEFAULT_PREFS: UserPreferences = {
   dashboard_widgets: DEFAULT_WIDGETS,
 }
 
-export async function getProfile(): Promise<Profile | null> {
+// cache() deduplica getUser() nell'intera request — una sola chiamata anche se
+// getProfile e getPreferences vengono chiamate in parallelo con Promise.all()
+const getUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  return user?.id ?? null
+})
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('first_name, last_name, full_name, role, company, bio, phone, timezone, avatar_url')
-    .eq('user_id', user.id)
-    .maybeSingle()
+export const getProfile = cache(async (): Promise<Profile | null> => {
+  const userId = await getUserId()
+  if (!userId) return null
 
-  return data as Profile | null
-}
+  return unstable_cache(
+    async () => {
+      const supabase = await createClient()
+      const { data } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, full_name, role, company, bio, phone, timezone, avatar_url')
+        .eq('user_id', userId)
+        .maybeSingle()
+      return data as Profile | null
+    },
+    [`profile-${userId}`],
+    { tags: [`profile-${userId}`], revalidate: 60 }
+  )()
+})
 
-export async function getPreferences(): Promise<UserPreferences> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return DEFAULT_PREFS
+export const getPreferences = cache(async (): Promise<UserPreferences> => {
+  const userId = await getUserId()
+  if (!userId) return DEFAULT_PREFS
 
-  const { data } = await supabase
-    .from('user_preferences')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const data = await unstable_cache(
+    async () => {
+      const supabase = await createClient()
+      const { data } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+      return data
+    },
+    [`prefs-${userId}`],
+    { tags: [`prefs-${userId}`], revalidate: 60 }
+  )()
 
   if (!data) return DEFAULT_PREFS
   return {
@@ -68,4 +90,4 @@ export async function getPreferences(): Promise<UserPreferences> {
       ? data.dashboard_widgets
       : DEFAULT_WIDGETS,
   }
-}
+})
