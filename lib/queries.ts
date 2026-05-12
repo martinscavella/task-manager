@@ -8,73 +8,76 @@ import type { Task } from './types'
 
 type TaskSummary = Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'label' | 'due_date'>
 
-async function fetchTasks(userId: string): Promise<Task[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-  if (error) { console.error('fetchTasks:', error); return [] }
-  return data as Task[]
-}
-
-async function fetchTaskById(id: string): Promise<Task | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('id', id)
-    .single()
-  if (error || !data) { console.error('fetchTaskById:', error); return null }
-  return data as Task
-}
-
-async function fetchTasksSidebar(userId: string): Promise<TaskSummary[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('id,title,status,priority,label,due_date')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-  if (error) { console.error('fetchTasksSidebar:', error); return [] }
-  return data as TaskSummary[]
-}
-
 async function getUserId(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user?.id ?? null
 }
 
-export async function getTasks(): Promise<Task[]> {
-  const userId = await getUserId()
-  if (!userId) return []
-  return unstable_cache(
-    () => fetchTasks(userId),
+const fetchTasksCached = (userId: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = await createClient()
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (error) { console.error('fetchTasks:', error); return [] }
+      return data as Task[]
+    },
     [`tasks-list-${userId}`],
     { tags: [`tasks-${userId}`], revalidate: 30 }
   )()
+
+const fetchTaskByIdCached = (id: string, userId: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = await createClient()
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', id)
+        .single()
+      if (error || !data) { console.error('fetchTaskById:', error); return null }
+      return data as Task
+    },
+    [`task-${id}`],
+    { tags: [`task-${id}`, `tasks-${userId}`], revalidate: 30 }
+  )()
+
+const fetchTasksSidebarCached = (userId: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = await createClient()
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id,title,status,priority,label,due_date')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (error) { console.error('fetchTasksSidebar:', error); return [] }
+      return data as TaskSummary[]
+    },
+    [`tasks-sidebar-${userId}`],
+    { tags: [`tasks-${userId}`], revalidate: 30 }
+  )()
+
+export async function getTasks(): Promise<Task[]> {
+  const userId = await getUserId()
+  if (!userId) return []
+  return fetchTasksCached(userId)
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
   const userId = await getUserId()
   if (!userId) return null
-  return unstable_cache(
-    () => fetchTaskById(id),
-    [`task-${id}`],
-    { tags: [`task-${id}`, `tasks-${userId}`], revalidate: 30 }
-  )()
+  return fetchTaskByIdCached(id, userId)
 }
 
 export async function getTasksSidebar(): Promise<TaskSummary[]> {
   const userId = await getUserId()
   if (!userId) return []
-  return unstable_cache(
-    () => fetchTasksSidebar(userId),
-    [`tasks-sidebar-${userId}`],
-    { tags: [`tasks-${userId}`], revalidate: 30 }
-  )()
+  return fetchTasksSidebarCached(userId)
 }
 
 export async function getTaskAnalytics() {
