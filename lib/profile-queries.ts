@@ -35,17 +35,17 @@ export const DEFAULT_PREFS: UserPreferences = {
   dashboard_widgets: DEFAULT_WIDGETS,
 }
 
-// cache() deduplica getUser() nell'intera request — una sola chiamata anche se
-// getProfile e getPreferences vengono chiamate in parallelo con Promise.all()
-const getUserId = cache(async (): Promise<string | null> => {
+// cache() di React deduplica getUser() nell'intera request — chiamata una volta sola
+const getAuthUser = cache(async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  return user?.id ?? null
+  return user
 })
 
-export const getProfile = cache(async (): Promise<Profile | null> => {
-  const userId = await getUserId()
-  if (!userId) return null
+export async function getProfile(): Promise<Profile | null> {
+  const user = await getAuthUser()
+  if (!user) return null
+  const userId = user.id
 
   return unstable_cache(
     async () => {
@@ -60,11 +60,12 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
     [`profile-${userId}`],
     { tags: [`profile-${userId}`], revalidate: 60 }
   )()
-})
+}
 
-export const getPreferences = cache(async (): Promise<UserPreferences> => {
-  const userId = await getUserId()
-  if (!userId) return DEFAULT_PREFS
+export async function getPreferences(): Promise<UserPreferences> {
+  const user = await getAuthUser()
+  if (!user) return DEFAULT_PREFS
+  const userId = user.id
 
   const data = await unstable_cache(
     async () => {
@@ -90,4 +91,4 @@ export const getPreferences = cache(async (): Promise<UserPreferences> => {
       ? data.dashboard_widgets
       : DEFAULT_WIDGETS,
   }
-})
+}
