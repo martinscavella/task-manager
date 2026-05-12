@@ -4,9 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Profile, UserPreferences } from './profile-queries'
 
-export type { Profile, UserPreferences } from './profile-queries'
-export { getProfile, getPreferences } from './profile-queries'
-
 export async function upsertProfile(profile: Partial<Profile>): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { SettingsView } from '@/components/settings-view'
-import { getProfile, getPreferences } from '@/lib/profile-actions'
+import { getProfile, getPreferences } from '@/lib/profile-queries'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
