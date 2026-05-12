@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { STATUS_CONFIG, PRIORITY_CONFIG, type Task, type TaskPriority, type TaskStatus } from '@/lib/types'
 import { getDueDateStatus } from '@/lib/due-date-utils'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { SearchIcon, ChevronDown, ArrowUpDown, Layers } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 type SortKey = 'status' | 'priority' | 'due_date' | 'title'
 type GroupKey = 'none' | 'status' | 'priority' | 'label'
+
+const STORAGE_KEY = 'task-sidebar-prefs'
 
 const STATUS_ORDER: Record<string, number> = {
   BLOCKED: 0, IN_PROGRESS: 1, IN_TEST: 2, IN_REVIEW: 3,
@@ -19,7 +21,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'status',   label: 'Stato' },
-  { value: 'priority', label: 'Priorità' },
+  { value: 'priority', label: 'Priorit\u00e0' },
   { value: 'due_date', label: 'Scadenza' },
   { value: 'title',    label: 'Titolo' },
 ]
@@ -27,13 +29,34 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 const GROUP_OPTIONS: { value: GroupKey; label: string }[] = [
   { value: 'none',     label: 'Nessun gruppo' },
   { value: 'status',   label: 'Per stato' },
-  { value: 'priority', label: 'Per priorità' },
+  { value: 'priority', label: 'Per priorit\u00e0' },
   { value: 'label',    label: 'Per etichetta' },
 ]
 
+function readPrefs(): { sortBy: SortKey; groupBy: GroupKey } {
+  if (typeof window === 'undefined') return { sortBy: 'status', groupBy: 'none' }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return { sortBy: 'status', groupBy: 'none' }
+    const parsed = JSON.parse(raw)
+    const validSort: SortKey[] = ['status', 'priority', 'due_date', 'title']
+    const validGroup: GroupKey[] = ['none', 'status', 'priority', 'label']
+    return {
+      sortBy:  validSort.includes(parsed.sortBy)   ? parsed.sortBy  : 'status',
+      groupBy: validGroup.includes(parsed.groupBy) ? parsed.groupBy : 'none',
+    }
+  } catch {
+    return { sortBy: 'status', groupBy: 'none' }
+  }
+}
+
+function writePrefs(sortBy: SortKey, groupBy: GroupKey) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ sortBy, groupBy })) } catch {}
+}
+
 function getGroupLabel(task: Task, groupBy: GroupKey): string {
   if (groupBy === 'status')   return STATUS_CONFIG[task.status as TaskStatus]?.label ?? task.status
-  if (groupBy === 'priority') return `P${task.priority} — ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
+  if (groupBy === 'priority') return `P${task.priority} \u2014 ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
   if (groupBy === 'label')    return task.label || 'Senza etichetta'
   return ''
 }
@@ -67,10 +90,28 @@ interface TaskDetailSidebarProps {
 export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<SortKey>('status')
-  const [groupBy, setGroupBy] = useState<GroupKey>('none')
   const [showControls, setShowControls] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+
+  // Initialise from localStorage on first render (client-only)
+  const [sortBy, setSortByState] = useState<SortKey>('status')
+  const [groupBy, setGroupByState] = useState<GroupKey>('none')
+
+  useEffect(() => {
+    const { sortBy: s, groupBy: g } = readPrefs()
+    setSortByState(s)
+    setGroupByState(g)
+  }, [])
+
+  const setSortBy = (v: SortKey) => {
+    setSortByState(v)
+    writePrefs(v, groupBy)
+  }
+
+  const setGroupBy = (v: GroupKey) => {
+    setGroupByState(v)
+    writePrefs(sortBy, v)
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -167,7 +208,7 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
             {SORT_OPTIONS.find(s => s.value === sortBy)?.label}
             {groupBy !== 'none' && (
               <>
-                <span className="opacity-40">·</span>
+                <span className="opacity-40">\u00b7</span>
                 <Layers className="size-3" />
                 {GROUP_OPTIONS.find(g => g.value === groupBy)?.label}
               </>
@@ -225,7 +266,6 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
 
         {groups.map(group => (
           <div key={group.key} className="mb-1">
-            {/* Section header — solo se c'è raggruppamento */}
             {groupBy !== 'none' && (
               <button
                 onClick={() => toggleCollapse(group.key)}
@@ -243,8 +283,6 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
                 </span>
               </button>
             )}
-
-            {/* Tasks */}
             {!collapsed[group.key] && (
               <div className="space-y-0.5">
                 {group.tasks.map(renderTask)}
