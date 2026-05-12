@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { getTaskById, getTasksSidebar } from '@/lib/actions'
+import { getTaskById, getTasksSidebar } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import { TaskDetailView } from '@/components/task-detail-view'
 import { TaskDetailSidebar } from '@/components/task-detail-sidebar'
