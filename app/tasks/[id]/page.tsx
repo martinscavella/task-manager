@@ -25,7 +25,12 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
         {/* Sidebar sinistra: lista task */}
         <aside className="hidden lg:flex flex-col w-64 xl:w-72 border-r bg-muted/20 shrink-0">
           <div className="flex items-center gap-2 px-4 py-4 border-b">
-            <BackButton label="Task" className="-ml-1 h-8 gap-1.5 text-muted-foreground hover:text-foreground" />
+            <BackButton
+              label="Task"
+              fallback="/"
+              forcePush
+              className="-ml-1 h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+            />
           </div>
           <TaskDetailSidebar tasks={tasks} currentId={id} />
         </aside>
@@ -40,7 +45,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           <div className="mx-auto max-w-4xl px-4 pb-8 lg:py-8">
             {/* Mobile back button */}
             <div className="mb-6 lg:hidden">
-              <BackButton label="Torna ai task" />
+              <BackButton label="Torna ai task" fallback="/" forcePush />
             </div>
             <Suspense fallback={<TaskDetailLoading />}>
               <TaskDetailData id={id} />
