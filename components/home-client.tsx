@@ -17,10 +17,9 @@ const VALID_TABS = ['dashboard', 'tasks', 'analytics'] as const
 type TabValue = typeof VALID_TABS[number]
 
 function readTab(): TabValue {
-  if (typeof window === 'undefined') return 'dashboard'
   try {
-    const v = sessionStorage.getItem(TAB_KEY)
-    if (v && VALID_TABS.includes(v as TabValue)) return v as TabValue
+    const v = localStorage.getItem(TAB_KEY)
+    if (v && (VALID_TABS as readonly string[]).includes(v)) return v as TabValue
   } catch {}
   return 'dashboard'
 }
@@ -43,7 +42,6 @@ export function HomeClient({
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabValue>('dashboard')
 
-  // Leggi il tab salvato al mount
   useEffect(() => {
     setActiveTab(readTab())
   }, [])
@@ -51,7 +49,7 @@ export function HomeClient({
   const handleTabChange = (tab: string) => {
     const t = tab as TabValue
     setActiveTab(t)
-    try { sessionStorage.setItem(TAB_KEY, t) } catch {}
+    try { localStorage.setItem(TAB_KEY, t) } catch {}
   }
 
   return (

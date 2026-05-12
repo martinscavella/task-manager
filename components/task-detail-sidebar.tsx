@@ -21,7 +21,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'status',   label: 'Stato' },
-  { value: 'priority', label: 'Priorità' },
+  { value: 'priority', label: 'Priorit\u00e0' },
   { value: 'due_date', label: 'Scadenza' },
   { value: 'title',    label: 'Titolo' },
 ]
@@ -29,7 +29,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 const GROUP_OPTIONS: { value: GroupKey; label: string }[] = [
   { value: 'none',     label: 'Nessun gruppo' },
   { value: 'status',   label: 'Per stato' },
-  { value: 'priority', label: 'Per priorità' },
+  { value: 'priority', label: 'Per priorit\u00e0' },
   { value: 'label',    label: 'Per etichetta' },
 ]
 
@@ -102,15 +102,8 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
     setGroupByState(g)
   }, [])
 
-  const setSortBy = (v: SortKey) => {
-    setSortByState(v)
-    writePrefs(v, groupBy)
-  }
-
-  const setGroupBy = (v: GroupKey) => {
-    setGroupByState(v)
-    writePrefs(sortBy, v)
-  }
+  const setSortBy = (v: SortKey) => { setSortByState(v); writePrefs(v, groupBy) }
+  const setGroupBy = (v: GroupKey) => { setGroupByState(v); writePrefs(sortBy, v) }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -202,21 +195,20 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
           onClick={() => setShowControls(v => !v)}
           className="w-full flex items-center justify-between text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-0.5"
         >
-          <span className="flex items-center gap-1.5">
-            <ArrowUpDown className="size-3" />
-            {SORT_OPTIONS.find(s => s.value === sortBy)?.label}
+          <span className="flex items-center gap-1.5 min-w-0 truncate">
+            <ArrowUpDown className="size-3 shrink-0" />
+            <span className="truncate">{SORT_OPTIONS.find(s => s.value === sortBy)?.label}</span>
             {groupBy !== 'none' && (
               <>
-                <span className="opacity-40">·</span>
-                <Layers className="size-3" />
-                {GROUP_OPTIONS.find(g => g.value === groupBy)?.label}
+                <span className="opacity-40 shrink-0">\u00b7</span>
+                <Layers className="size-3 shrink-0" />
+                <span className="truncate">{GROUP_OPTIONS.find(g => g.value === groupBy)?.label}</span>
               </>
             )}
           </span>
-          <ChevronDown className={cn('size-3 transition-transform duration-200', showControls && 'rotate-180')} />
+          <ChevronDown className={cn('size-3 shrink-0 ml-1 transition-transform duration-200', showControls && 'rotate-180')} />
         </button>
 
-        {/* Expanded controls */}
         {showControls && (
           <div className="space-y-2 pt-1">
             <div>
@@ -262,7 +254,6 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
         {filtered.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-6">Nessun task trovato</p>
         )}
-
         {groups.map(group => (
           <div key={group.key} className="mb-1">
             {groupBy !== 'none' && (
@@ -273,8 +264,8 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-hover/header:text-foreground transition-colors truncate mr-2">
                   {group.label}
                 </span>
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[10px] text-muted-foreground tabular-nums">{group.tasks.length}</span>
+                <span className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] tabular-nums text-muted-foreground">{group.tasks.length}</span>
                   <ChevronDown className={cn(
                     'size-3 text-muted-foreground transition-transform duration-200',
                     collapsed[group.key] && '-rotate-90'

@@ -47,14 +47,28 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
   const [editOpen, setEditOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     setDeleting(true)
     await deleteTask(task.id)
     setDeleting(false)
   }
 
-  const handleSetBlocked = async () => { await updateTaskStatus(task.id, 'BLOCKED') }
-  const handleSetCancelled = async () => { await updateTaskStatus(task.id, 'CANCELLED') }
+  const handleSetBlocked = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    await updateTaskStatus(task.id, 'BLOCKED')
+  }
+
+  const handleSetCancelled = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    await updateTaskStatus(task.id, 'CANCELLED')
+  }
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditOpen(true)
+  }
+
   const handleCardClick = () => { router.push(`/tasks/${task.id}`) }
 
   const isCompleted = task.status === 'COMPLETED'
@@ -75,8 +89,8 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
           <MoreHorizontalIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setEditOpen(true)}>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem onClick={handleEdit}>
           <PencilIcon className="size-4" />Modifica
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSetBlocked}>
@@ -91,8 +105,7 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     </DropdownMenu>
   )
 
-  // ── MOBILE LIST (compact su mobile) ─────────────────────────────────────────
-  // Layout a riga unica ottimizzato: dot priorità · titolo · stato badge · data · chevron
+  // ── MOBILE LIST ─────────────────────────────────────────────────────────────
   const mobileCard = (
     <>
       <div
@@ -102,10 +115,7 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
           (isCompleted || isCancelled) && 'opacity-50',
         )}
       >
-        {/* Dot priorità */}
         <span className={cn('size-2 rounded-full shrink-0', dotColor)} />
-
-        {/* Titolo + info secondarie */}
         <div className="flex-1 min-w-0">
           <p className={cn(
             'text-sm font-medium truncate leading-snug',
@@ -114,20 +124,17 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
             {task.title}
           </p>
           <div className="flex items-center gap-1.5 mt-0.5">
-            {/* Stato */}
             <span className={cn(
               'text-[11px] font-medium px-1.5 py-0.5 rounded-full',
               statusConfig.bgColor, statusConfig.color
             )}>
               {statusConfig.label}
             </span>
-            {/* Etichetta */}
             {task.label && (
               <span className="text-[11px] text-muted-foreground truncate max-w-[80px]">
                 {task.label}
               </span>
             )}
-            {/* Scadenza */}
             {task.due_date && (
               <span className={cn(
                 'text-[11px] font-medium ml-auto shrink-0',
@@ -140,8 +147,6 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
             )}
           </div>
         </div>
-
-        {/* Menu azioni */}
         <div onClick={e => e.stopPropagation()}>{actionsMenu}</div>
       </div>
       <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
@@ -192,14 +197,11 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── COMPACT (desktop list) — mobile usa mobileCard sopra ─────────────────────
+  // ── COMPACT (desktop list) ────────────────────────────────────────────────────
   if (compact) {
     return (
       <>
-        {/* Mobile: lista nativa stile iOS */}
         <div className="md:hidden">{mobileCard}</div>
-
-        {/* Desktop: card con stepper */}
         <div
           onClick={handleCardClick}
           style={cardStyle}
@@ -246,13 +248,10 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
     )
   }
 
-  // ── GRID / CARDS (desktop) — mobile usa mobileCard ───────────────────────────
+  // ── GRID / CARDS (desktop) ────────────────────────────────────────────────────
   return (
     <>
-      {/* Mobile */}
       <div className="md:hidden">{mobileCard}</div>
-
-      {/* Desktop */}
       <div
         onClick={handleCardClick}
         style={cardStyle}
@@ -301,21 +300,8 @@ export function TaskCard({ task, compact = false, kanban = false }: TaskCardProp
               <TaskWorkflowStepper task={task} />
             </div>
           </div>
-          <div className="shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon-sm"><MoreHorizontalIcon className="size-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setEditOpen(true)}><PencilIcon className="size-4" />Modifica</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSetBlocked}><Ban className="size-4" />Blocca</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={handleSetCancelled}>Annulla Task</DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" onClick={handleDelete} disabled={deleting}>
-                  <TrashIcon className="size-4" />{deleting ? 'Eliminazione...' : 'Elimina'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            {actionsMenu}
           </div>
         </div>
       </div>
