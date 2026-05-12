@@ -21,7 +21,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'status',   label: 'Stato' },
-  { value: 'priority', label: 'Priorit\u00e0' },
+  { value: 'priority', label: 'Priorità' },
   { value: 'due_date', label: 'Scadenza' },
   { value: 'title',    label: 'Titolo' },
 ]
@@ -29,7 +29,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 const GROUP_OPTIONS: { value: GroupKey; label: string }[] = [
   { value: 'none',     label: 'Nessun gruppo' },
   { value: 'status',   label: 'Per stato' },
-  { value: 'priority', label: 'Per priorit\u00e0' },
+  { value: 'priority', label: 'Per priorità' },
   { value: 'label',    label: 'Per etichetta' },
 ]
 
@@ -56,7 +56,7 @@ function writePrefs(sortBy: SortKey, groupBy: GroupKey) {
 
 function getGroupLabel(task: Task, groupBy: GroupKey): string {
   if (groupBy === 'status')   return STATUS_CONFIG[task.status as TaskStatus]?.label ?? task.status
-  if (groupBy === 'priority') return `P${task.priority} \u2014 ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
+  if (groupBy === 'priority') return `P${task.priority} — ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
   if (groupBy === 'label')    return task.label || 'Senza etichetta'
   return ''
 }
@@ -93,7 +93,6 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
   const [showControls, setShowControls] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
-  // Initialise from localStorage on first render (client-only)
   const [sortBy, setSortByState] = useState<SortKey>('status')
   const [groupBy, setGroupByState] = useState<GroupKey>('none')
 
@@ -208,7 +207,7 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
             {SORT_OPTIONS.find(s => s.value === sortBy)?.label}
             {groupBy !== 'none' && (
               <>
-                <span className="opacity-40">\u00b7</span>
+                <span className="opacity-40">·</span>
                 <Layers className="size-3" />
                 {GROUP_OPTIONS.find(g => g.value === groupBy)?.label}
               </>
