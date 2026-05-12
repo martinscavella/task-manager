@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TaskList } from '@/components/task-list'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
 import { DashboardWidgets } from '@/components/dashboard-widgets'
@@ -11,6 +11,19 @@ import { BarChart3, ListTodo, LayoutDashboard } from 'lucide-react'
 import { UserMenuButton } from '@/components/user-menu-button'
 import type { Task } from '@/lib/types'
 import type { UserPreferences } from '@/lib/profile-actions'
+
+const TAB_KEY = 'home-active-tab'
+const VALID_TABS = ['dashboard', 'tasks', 'analytics'] as const
+type TabValue = typeof VALID_TABS[number]
+
+function readTab(): TabValue {
+  if (typeof window === 'undefined') return 'dashboard'
+  try {
+    const v = sessionStorage.getItem(TAB_KEY)
+    if (v && VALID_TABS.includes(v as TabValue)) return v as TabValue
+  } catch {}
+  return 'dashboard'
+}
 
 interface Props {
   tasks: Task[]
@@ -28,7 +41,18 @@ export function HomeClient({
   firstName, displayName, email,
   greeting, dateLabel,
 }: Props) {
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState<TabValue>('dashboard')
+
+  // Leggi il tab salvato al mount
+  useEffect(() => {
+    setActiveTab(readTab())
+  }, [])
+
+  const handleTabChange = (tab: string) => {
+    const t = tab as TabValue
+    setActiveTab(t)
+    try { sessionStorage.setItem(TAB_KEY, t) } catch {}
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -50,7 +74,7 @@ export function HomeClient({
 
         {/* Desktop */}
         <div className="hidden md:block">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList>
               <TabsTrigger value="dashboard" className="gap-2">
                 <LayoutDashboard className="size-4" />Dashboard
@@ -63,7 +87,7 @@ export function HomeClient({
               </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
-              <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} onTabChange={setActiveTab} />
+              <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} onTabChange={handleTabChange} />
             </TabsContent>
             <TabsContent value="tasks">
               <TaskList tasks={tasks} />
@@ -77,14 +101,14 @@ export function HomeClient({
         {/* Mobile */}
         <div className="md:hidden">
           {activeTab === 'dashboard' && (
-            <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} onTabChange={setActiveTab} />
+            <DashboardWidgets tasks={tasks} preferences={preferences} firstName={firstName} onTabChange={handleTabChange} />
           )}
           {activeTab === 'tasks' && <TaskList tasks={tasks} />}
           {activeTab === 'analytics' && <AnalyticsDashboard data={analytics} />}
         </div>
       </div>
 
-      <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <MobileNav activeTab={activeTab} onTabChange={handleTabChange} />
       <MobileFab />
     </main>
   )

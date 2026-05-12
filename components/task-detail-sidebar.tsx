@@ -56,7 +56,7 @@ function writePrefs(sortBy: SortKey, groupBy: GroupKey) {
 
 function getGroupLabel(task: Task, groupBy: GroupKey): string {
   if (groupBy === 'status')   return STATUS_CONFIG[task.status as TaskStatus]?.label ?? task.status
-  if (groupBy === 'priority') return `P${task.priority} — ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
+  if (groupBy === 'priority') return `P${task.priority} \u2014 ${PRIORITY_CONFIG[task.priority as TaskPriority]?.label ?? task.priority}`
   if (groupBy === 'label')    return task.label || 'Senza etichetta'
   return ''
 }
@@ -270,11 +270,11 @@ export function TaskDetailSidebar({ tasks, currentId }: TaskDetailSidebarProps) 
                 onClick={() => toggleCollapse(group.key)}
                 className="w-full flex items-center justify-between px-2 pt-3 pb-1 group/header"
               >
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-hover/header:text-foreground transition-colors">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-hover/header:text-foreground transition-colors truncate mr-2">
                   {group.label}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground">{group.tasks.length}</span>
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] text-muted-foreground tabular-nums">{group.tasks.length}</span>
                   <ChevronDown className={cn(
                     'size-3 text-muted-foreground transition-transform duration-200',
                     collapsed[group.key] && '-rotate-90'
