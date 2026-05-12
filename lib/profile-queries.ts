@@ -1,9 +1,12 @@
 // Query di lettura profilo e preferenze.
 // NON marcato 'use server' — usare solo da Server Components.
+//
+// NOTA: unstable_cache NON funziona qui perché createClient() chiama cookies()
+// che non è disponibile nel contesto isolato di unstable_cache.
+// Usiamo cache() di React che deduplica le chiamate nella stessa request.
 
 import { createClient } from '@/lib/supabase/server'
 import { cache } from 'react'
-import { unstable_cache } from 'next/cache'
 
 export interface Profile {
   first_name: string | null
@@ -35,51 +38,37 @@ export const DEFAULT_PREFS: UserPreferences = {
   dashboard_widgets: DEFAULT_WIDGETS,
 }
 
-// cache() di React deduplica getUser() nell'intera request — chiamata una volta sola
+// cache() deduplica nell'intera request — getUser() chiamato una volta sola
 const getAuthUser = cache(async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user
 })
 
-export async function getProfile(): Promise<Profile | null> {
+export const getProfile = cache(async (): Promise<Profile | null> => {
   const user = await getAuthUser()
   if (!user) return null
-  const userId = user.id
 
-  return unstable_cache(
-    async () => {
-      const supabase = await createClient()
-      const { data } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, full_name, role, company, bio, phone, timezone, avatar_url')
-        .eq('user_id', userId)
-        .maybeSingle()
-      return data as Profile | null
-    },
-    [`profile-${userId}`],
-    { tags: [`profile-${userId}`], revalidate: 60 }
-  )()
-}
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, full_name, role, company, bio, phone, timezone, avatar_url')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
-export async function getPreferences(): Promise<UserPreferences> {
+  return data as Profile | null
+})
+
+export const getPreferences = cache(async (): Promise<UserPreferences> => {
   const user = await getAuthUser()
   if (!user) return DEFAULT_PREFS
-  const userId = user.id
 
-  const data = await unstable_cache(
-    async () => {
-      const supabase = await createClient()
-      const { data } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle()
-      return data
-    },
-    [`prefs-${userId}`],
-    { tags: [`prefs-${userId}`], revalidate: 60 }
-  )()
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('user_preferences')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
   if (!data) return DEFAULT_PREFS
   return {
@@ -91,4 +80,4 @@ export async function getPreferences(): Promise<UserPreferences> {
       ? data.dashboard_widgets
       : DEFAULT_WIDGETS,
   }
-}
+})
