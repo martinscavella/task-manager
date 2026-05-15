@@ -99,20 +99,16 @@ export async function getComponentHistory(
 /**
  * Lista aggregata di tutti i componenti distinti che hanno almeno una voce
  * nel log. Usata dalla pagina /components.
+ *
+ * Usa tasks!inner per soddisfare la RLS policy che verifica user_id su tasks.
  */
 export interface ComponentSummary {
   component_ref: string
-  /** Quante volte è stato toccato in totale */
   total_changes: number
-  /** Quanti task distinti l'hanno modificato */
   task_count: number
-  /** Tipo metadato prevalente (es. LWC, Apex Class…) */
   metadata_type: string
-  /** Tecnologia prevalente */
   technology: string
-  /** Data ultima modifica */
   last_modified: string
-  /** Stato dell'ultima modifica */
   last_change_status: string
 }
 
@@ -122,18 +118,18 @@ export async function getAllComponents(): Promise<ComponentSummary[]> {
 
   const supabase = await createClient()
 
-  // Prendiamo tutti i log con component_ref valorizzato
+  // Join con tasks!inner: la RLS su tasks filtra automaticamente per user_id
   const { data, error } = await supabase
     .from('task_action_logs')
-    .select('component_ref, task_id, metadata_type, technology, change_status, created_at')
+    .select('component_ref, task_id, metadata_type, technology, change_status, created_at, tasks!inner(id)')
     .not('component_ref', 'is', null)
     .neq('component_ref', '')
     .order('created_at', { ascending: false })
 
   if (error) { console.error('getAllComponents:', error); return [] }
 
-  // Aggrega client-side per component_ref
-  const map = new Map<string, ComponentSummary>()
+  // Aggrega client-side in un solo passaggio
+  const map = new Map<string, ComponentSummary & { _task_ids: Set<string> }>()
 
   for (const row of (data ?? []) as any[]) {
     const ref: string = row.component_ref
@@ -148,37 +144,20 @@ export async function getAllComponents(): Promise<ComponentSummary[]> {
         technology: row.technology,
         last_modified: row.created_at,
         last_change_status: row.change_status,
+        _task_ids: new Set([row.task_id]),
       })
     } else {
       const entry = map.get(ref)!
       entry.total_changes += 1
-      // task_count: conta task distinti (primo passaggio, poi deduplicazione)
-      ;(entry as any)._task_ids = (entry as any)._task_ids ?? new Set([entry.task_count])
-      ;(entry as any)._task_ids.add(row.task_id)
+      entry._task_ids.add(row.task_id)
+      entry.task_count = entry._task_ids.size
+      // last_modified è già il più recente (query ordinata DESC)
     }
   }
 
-  // Secondo passaggio: calcola task_count preciso con task_id distinti
-  const { data: taskIds, error: e2 } = await supabase
-    .from('task_action_logs')
-    .select('component_ref, task_id')
-    .not('component_ref', 'is', null)
-    .neq('component_ref', '')
-
-  if (!e2 && taskIds) {
-    const taskSets = new Map<string, Set<string>>()
-    for (const row of taskIds as any[]) {
-      if (!taskSets.has(row.component_ref)) taskSets.set(row.component_ref, new Set())
-      taskSets.get(row.component_ref)!.add(row.task_id)
-    }
-    for (const [ref, entry] of map.entries()) {
-      entry.task_count = taskSets.get(ref)?.size ?? 1
-    }
-  }
-
-  return Array.from(map.values()).sort((a, b) =>
-    new Date(b.last_modified).getTime() - new Date(a.last_modified).getTime()
-  )
+  return Array.from(map.values())
+    .map(({ _task_ids, ...rest }) => rest)
+    .sort((a, b) => new Date(b.last_modified).getTime() - new Date(a.last_modified).getTime())
 }
 
 export async function getTaskAnalytics() {
