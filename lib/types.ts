@@ -60,7 +60,6 @@ export const WORKFLOW_STEPS: TaskStatus[] = [
   'COMPLETED',
 ]
 
-/** Etichette predefinite. Ulteriori etichette aggiunte dall'utente vengono salvate in localStorage. */
 export const PREDEFINED_LABELS: string[] = [
   'Bug',
   'Feature',
@@ -70,15 +69,12 @@ export const PREDEFINED_LABELS: string[] = [
   'DevOps',
 ]
 
-/** Restituisce true se l'etichetta è di tipo Bug (case-insensitive) */
 export function isBugLabel(label: string | null | undefined): boolean {
   return label?.trim().toLowerCase() === 'bug'
 }
 
-/** Etichette che abilitano la sezione Action Log (tutte le label di sviluppo) */
 export const DEV_LABELS = ['Bug', 'Feature', 'Miglioramento', 'Refactor', 'Documentazione', 'DevOps']
 
-/** Restituisce true se l'etichetta attiva la sezione Action Log */
 export function isDevLabel(label: string | null | undefined): boolean {
   return DEV_LABELS.some(l => l.toLowerCase() === label?.trim().toLowerCase())
 }
@@ -94,13 +90,23 @@ export type ActionLogActionType =
   | 'deploy'
   | 'config'
 
+/** Stato della modifica al componente */
+export type ChangeStatus = 'new' | 'modified' | 'deleted'
+
+export const CHANGE_STATUS_CONFIG: Record<ChangeStatus, { label: string; color: string; bgColor: string; borderColor: string }> = {
+  new:      { label: 'Nuovo',     color: 'text-emerald-700', bgColor: 'bg-emerald-50',  borderColor: 'border-emerald-200' },
+  modified: { label: 'Modificato', color: 'text-amber-700',  bgColor: 'bg-amber-50',   borderColor: 'border-amber-200' },
+  deleted:  { label: 'Eliminato', color: 'text-red-700',     bgColor: 'bg-red-50',     borderColor: 'border-red-200' },
+}
+
 export interface ActionLogEntry {
   id: string
   task_id: string
   user_id: string | null
   action_type: ActionLogActionType
-  technology: string          // es. 'salesforce', 'generic', 'react', ...
-  metadata_type: string       // es. 'LWC', 'Apex Class', 'Flow', 'Component', ...
+  technology: string
+  metadata_type: string
+  change_status: ChangeStatus
   title: string
   description: string | null
   component_ref: string | null
@@ -108,8 +114,8 @@ export interface ActionLogEntry {
 }
 
 export type CreateActionLogInput = Omit<ActionLogEntry, 'id' | 'created_at' | 'user_id'>
+export type UpdateActionLogInput = Partial<Omit<ActionLogEntry, 'id' | 'task_id' | 'user_id' | 'created_at'>> & { id: string }
 
-/** Config per ogni tipo di azione */
 export const ACTION_TYPE_CONFIG: Record<ActionLogActionType, { label: string }> = {
   component:        { label: 'Componente' },
   metadata:         { label: 'Metadato' },
@@ -118,16 +124,12 @@ export const ACTION_TYPE_CONFIG: Record<ActionLogActionType, { label: string }> 
   config:           { label: 'Configurazione' },
 }
 
-/** Tecnologie supportate con le loro picklist di metadata_type */
 export interface TechnologyConfig {
   label: string
-  /** Emoji o sigla da mostrare nel badge */
   badge: string
-  /** Colori Tailwind per badge/header */
   color: string
   bgColor: string
   borderColor: string
-  /** Valori predefiniti della picklist metadata_type */
   defaultMetadataTypes: string[]
 }
 

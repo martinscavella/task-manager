@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
-import type { CreateTaskInput, UpdateTaskInput, TaskStatus, CreateActionLogInput } from './types'
+import type { CreateTaskInput, UpdateTaskInput, TaskStatus, CreateActionLogInput, UpdateActionLogInput } from './types'
 
 async function getUserId(): Promise<string | null> {
   const supabase = await createClient()
@@ -103,6 +103,7 @@ export async function createActionLog(
     action_type: input.action_type,
     technology: input.technology,
     metadata_type: input.metadata_type,
+    change_status: input.change_status,
     title: input.title,
     description: input.description ?? null,
     component_ref: input.component_ref ?? null,
@@ -112,6 +113,31 @@ export async function createActionLog(
 
   revalidateTag(`task-${input.task_id}`)
   revalidatePath(`/tasks/${input.task_id}`, 'page')
+  return { success: true }
+}
+
+export async function updateActionLog(
+  input: UpdateActionLogInput
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const userId = await getUserId()
+  if (!userId) return { success: false, error: 'Non autenticato' }
+
+  const { id, ...updates } = input
+  const { error, data } = await supabase
+    .from('task_action_logs')
+    .update(updates)
+    .eq('id', id)
+    .select('task_id')
+    .single()
+
+  if (error) { console.error('updateActionLog:', error); return { success: false, error: error.message } }
+
+  const taskId = (data as { task_id: string } | null)?.task_id
+  if (taskId) {
+    revalidateTag(`task-${taskId}`)
+    revalidatePath(`/tasks/${taskId}`, 'page')
+  }
   return { success: true }
 }
 

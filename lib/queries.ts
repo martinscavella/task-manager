@@ -1,9 +1,5 @@
 // Data fetchers per Server Components.
 // NON marcato 'use server'.
-//
-// NOTA: unstable_cache NON funziona qui perche' createClient() chiama cookies()
-// che non e' disponibile nel contesto isolato di unstable_cache.
-// Usiamo cache() di React che deduplica le chiamate nella stessa request.
 
 import { createClient } from '@/lib/supabase/server'
 import { cache } from 'react'
@@ -72,6 +68,37 @@ export const getActionLogsByTaskId = cache(async (taskId: string): Promise<Actio
   if (error) { console.error('getActionLogsByTaskId:', error); return [] }
   return data as ActionLogEntry[]
 })
+
+/**
+ * Restituisce tutto lo storico cross-task per un dato component_ref.
+ * Usato dalla pagina /components/[name].
+ */
+export async function getComponentHistory(
+  componentRef: string
+): Promise<(ActionLogEntry & { task_title: string; task_label: string | null })[]> {
+  const user = await getAuthUser()
+  if (!user) return []
+
+  const supabase = await createClient()
+  // Join con tasks per ottenere titolo e label
+  const { data, error } = await supabase
+    .from('task_action_logs')
+    .select(`
+      *,
+      tasks!inner(title, label, id)
+    `)
+    .eq('component_ref', componentRef)
+    .order('created_at', { ascending: false })
+
+  if (error) { console.error('getComponentHistory:', error); return [] }
+
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    task_title: row.tasks?.title ?? '',
+    task_label: row.tasks?.label ?? null,
+    task_id:    row.tasks?.id ?? row.task_id,
+  }))
+}
 
 export async function getTaskAnalytics() {
   const tasks = await getTasks()
