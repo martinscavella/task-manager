@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -36,7 +35,6 @@ function getTechConfig(value: string | null | undefined) {
   return TECHNOLOGY_CONFIGS[key] || TECHNOLOGY_CONFIGS.generic
 }
 
-// Riga vuota per il form di aggiunta
 const EMPTY_ROW = {
   technology: DEFAULT_TECHNOLOGY,
   action_type: 'component' as ActionLogActionType,
@@ -60,7 +58,6 @@ interface Props {
   initialLogs: ActionLogEntry[]
 }
 
-// Componente cella select riutilizzabile (evita ripetizioni)
 function CellSelect({
   value, onChange, options, placeholder, className,
 }: {
@@ -98,11 +95,7 @@ function draftFromEntry(log: ActionLogEntry): RowDraft {
 }
 
 function MetadataTypeCell({
-  technology,
-  value,
-  customValue,
-  onChange,
-  onCustomChange,
+  technology, value, customValue, onChange, onCustomChange,
 }: {
   technology: string
   value: string
@@ -147,7 +140,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
   const [newDraft, setNewDraft] = useState<RowDraft>({ ...EMPTY_ROW })
   const [editState, setEditState] = useState<EditState | null>(null)
 
-  // Determina la tecnologia prevalente nei log esistenti per il badge header
   const dominantTech = initialLogs[0]?.technology ?? DEFAULT_TECHNOLOGY
   const techConfig = getTechConfig(dominantTech)
 
@@ -208,7 +200,7 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
   return (
     <div className={cn('border rounded-lg overflow-hidden', techConfig.borderColor)}>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className={cn('px-4 py-3 flex items-center justify-between', techConfig.bgColor)}>
         <h2 className={cn('text-xs font-semibold uppercase tracking-wider flex items-center gap-2', techConfig.color)}>
           <span className={cn(
@@ -225,17 +217,31 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
             {initialLogs.length}
           </span>
         </h2>
-        <Button
-          size="sm" variant="ghost"
-          className={cn('h-7 gap-1', techConfig.color)}
-          onClick={() => { setAddingRow(true); setEditState(null) }}
-          disabled={addingRow}
-        >
-          <Plus className="size-3.5" /> Aggiungi
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Link pagina dettaglio storico */}
+          <Link
+            href={`/tasks/${taskId}/logs`}
+            className={cn(
+              'inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors',
+              'hover:bg-black/5',
+              techConfig.color
+            )}
+          >
+            Storico completo
+            <ExternalLink className="size-3" />
+          </Link>
+          <Button
+            size="sm" variant="ghost"
+            className={cn('h-7 gap-1', techConfig.color)}
+            onClick={() => { setAddingRow(true); setEditState(null) }}
+            disabled={addingRow}
+          >
+            <Plus className="size-3.5" /> Aggiungi
+          </Button>
+        </div>
       </div>
 
-      {/* ── Tabella ── */}
+      {/* Tabella */}
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -252,10 +258,9 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
           </thead>
           <tbody className="divide-y">
 
-            {/* Riga nuova (form) */}
+            {/* Riga nuova */}
             {addingRow && (
-              <tr className={cn('bg-muted/10')}>
-                {/* Tecnologia */}
+              <tr className="bg-muted/10">
                 <td className="px-2 py-1.5">
                   <CellSelect
                     value={newDraft.technology}
@@ -263,7 +268,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                     options={techOptions}
                   />
                 </td>
-                {/* Tipo metadato */}
                 <td className="px-2 py-1.5">
                   <MetadataTypeCell
                     technology={newDraft.technology}
@@ -273,7 +277,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                     onCustomChange={v => setNewDraft(d => ({ ...d, custom_metadata_type: v }))}
                   />
                 </td>
-                {/* Stato */}
                 <td className="px-2 py-1.5">
                   <CellSelect
                     value={newDraft.change_status}
@@ -281,7 +284,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                     options={changeStatusOptions}
                   />
                 </td>
-                {/* Tipo azione */}
                 <td className="px-2 py-1.5">
                   <CellSelect
                     value={newDraft.action_type}
@@ -289,18 +291,19 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                     options={actionTypeOptions}
                   />
                 </td>
-                {/* Titolo */}
                 <td className="px-2 py-1.5">
                   <Input
                     autoFocus
                     value={newDraft.title}
                     onChange={e => setNewDraft(d => ({ ...d, title: e.target.value }))}
-                    onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAddingRow(false); setNewDraft({ ...EMPTY_ROW }) } }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleAdd()
+                      if (e.key === 'Escape') { setAddingRow(false); setNewDraft({ ...EMPTY_ROW }) }
+                    }}
                     placeholder="Nome componente / descrizione"
                     className="h-7 text-xs border-0 border-b rounded-none shadow-none focus-visible:ring-0 px-1"
                   />
                 </td>
-                {/* Path */}
                 <td className="px-2 py-1.5">
                   <Input
                     value={newDraft.component_ref}
@@ -309,9 +312,7 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                     className="h-7 text-xs font-mono border-0 border-b rounded-none shadow-none focus-visible:ring-0 px-1"
                   />
                 </td>
-                {/* Data placeholder */}
                 <td className="px-3 py-1.5 text-muted-foreground">—</td>
-                {/* Actions */}
                 <td className="px-2 py-1.5">
                   <div className="flex items-center gap-0.5">
                     <button
@@ -356,7 +357,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                       isEditing ? 'bg-muted/20' : 'hover:bg-muted/10'
                     )}
                   >
-                    {/* Tecnologia */}
                     <td className="px-3 py-2">
                       {isEditing ? (
                         <CellSelect
@@ -373,8 +373,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                         </span>
                       )}
                     </td>
-
-                    {/* Tipo metadato */}
                     <td className="px-3 py-2">
                       {isEditing ? (
                         <MetadataTypeCell
@@ -390,8 +388,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                         </span>
                       )}
                     </td>
-
-                    {/* Stato modifica */}
                     <td className="px-3 py-2">
                       {isEditing ? (
                         <CellSelect
@@ -408,8 +404,6 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                         </span>
                       )}
                     </td>
-
-                    {/* Tipo azione */}
                     <td className="px-3 py-2">
                       {isEditing ? (
                         <CellSelect
@@ -421,23 +415,22 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                         <span className="text-muted-foreground">{ACTION_TYPE_CONFIG[log.action_type]?.label}</span>
                       )}
                     </td>
-
-                    {/* Nome / Titolo */}
                     <td className="px-3 py-2">
                       {isEditing ? (
                         <Input
                           autoFocus
                           value={draft!.title}
                           onChange={e => setEditState(s => s ? { ...s, draft: { ...s.draft, title: e.target.value } } : s)}
-                          onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(log.id); if (e.key === 'Escape') setEditState(null) }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleSaveEdit(log.id)
+                            if (e.key === 'Escape') setEditState(null)
+                          }}
                           className="h-7 text-xs border-0 border-b rounded-none shadow-none focus-visible:ring-0 px-1"
                         />
                       ) : (
                         <span className="font-medium text-foreground">{log.title}</span>
                       )}
                     </td>
-
-                    {/* Path / Ref */}
                     <td className="px-3 py-2 max-w-[160px]">
                       {isEditing ? (
                         <Input
@@ -446,24 +439,19 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
                           className="h-7 text-xs font-mono border-0 border-b rounded-none shadow-none focus-visible:ring-0 px-1"
                         />
                       ) : log.component_ref ? (
-                        <Link
-                          href={`/components/${encodeURIComponent(log.component_ref)}`}
-                          className="font-mono text-[11px] text-sky-600 hover:text-sky-700 hover:underline truncate block max-w-[150px]"
+                        <span
+                          className="font-mono text-[11px] text-sky-600 truncate block max-w-[150px]"
                           title={log.component_ref}
                         >
                           {log.component_ref}
-                        </Link>
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-
-                    {/* Data */}
                     <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
                       {formatDate(log.created_at)}
                     </td>
-
-                    {/* Actions */}
                     <td className="px-2 py-2">
                       <div className="flex items-center gap-0.5">
                         {isEditing ? (
