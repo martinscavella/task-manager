@@ -30,6 +30,12 @@ import { cn } from '@/lib/utils'
 
 const DEFAULT_TECHNOLOGY = 'salesforce'
 
+/** Lookup sicuro: protegge da stringhe vuote, null, undefined e chiavi non mappate */
+function getTechConfig(value: string | null | undefined) {
+  const key = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return TECHNOLOGY_CONFIGS[key] || TECHNOLOGY_CONFIGS.generic
+}
+
 // Riga vuota per il form di aggiunta
 const EMPTY_ROW = {
   technology: DEFAULT_TECHNOLOGY,
@@ -104,7 +110,7 @@ function MetadataTypeCell({
   onChange: (v: string) => void
   onCustomChange: (v: string) => void
 }) {
-  const opts = TECHNOLOGY_CONFIGS[technology]?.defaultMetadataTypes ?? []
+  const opts = getTechConfig(technology).defaultMetadataTypes
   const isCustom = value === '__custom__'
   return (
     <div className="flex flex-col gap-0.5">
@@ -143,7 +149,7 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
 
   // Determina la tecnologia prevalente nei log esistenti per il badge header
   const dominantTech = initialLogs[0]?.technology ?? DEFAULT_TECHNOLOGY
-  const techConfig = TECHNOLOGY_CONFIGS[dominantTech] ?? TECHNOLOGY_CONFIGS.generic
+  const techConfig = getTechConfig(dominantTech)
 
   const handleAdd = () => {
     const resolved = resolveMetadataType(newDraft)
@@ -339,8 +345,8 @@ export function TaskActionLog({ taskId, initialLogs }: Props) {
               initialLogs.map(log => {
                 const isEditing = editState?.id === log.id
                 const draft = isEditing ? editState!.draft : null
-                const logTech = TECHNOLOGY_CONFIGS[log.technology] ?? TECHNOLOGY_CONFIGS.generic
-                const changeConf = CHANGE_STATUS_CONFIG[log.change_status]
+                const logTech = getTechConfig(log.technology)
+                const changeConf = CHANGE_STATUS_CONFIG[log.change_status] ?? CHANGE_STATUS_CONFIG.new
 
                 return (
                   <tr
