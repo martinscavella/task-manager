@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
-import type { CreateTaskInput, UpdateTaskInput, TaskStatus } from './types'
+import type { CreateTaskInput, UpdateTaskInput, TaskStatus, CreateActionLogInput } from './types'
 
 async function getUserId(): Promise<string | null> {
   const supabase = await createClient()
@@ -84,4 +84,50 @@ export async function signOut(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/landing')
+}
+
+// ---------------------------------------------------------------------------
+// Action Log
+// ---------------------------------------------------------------------------
+
+export async function createActionLog(
+  input: CreateActionLogInput
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const userId = await getUserId()
+  if (!userId) return { success: false, error: 'Non autenticato' }
+
+  const { error } = await supabase.from('task_action_logs').insert([{
+    task_id: input.task_id,
+    user_id: userId,
+    action_type: input.action_type,
+    technology: input.technology,
+    metadata_type: input.metadata_type,
+    title: input.title,
+    description: input.description ?? null,
+    component_ref: input.component_ref ?? null,
+  }])
+
+  if (error) { console.error('createActionLog:', error); return { success: false, error: error.message } }
+
+  revalidateTag(`task-${input.task_id}`)
+  revalidatePath(`/tasks/${input.task_id}`, 'page')
+  return { success: true }
+}
+
+export async function deleteActionLog(
+  id: string,
+  taskId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const userId = await getUserId()
+  if (!userId) return { success: false, error: 'Non autenticato' }
+
+  const { error } = await supabase.from('task_action_logs').delete().eq('id', id)
+
+  if (error) { console.error('deleteActionLog:', error); return { success: false, error: error.message } }
+
+  revalidateTag(`task-${taskId}`)
+  revalidatePath(`/tasks/${taskId}`, 'page')
+  return { success: true }
 }

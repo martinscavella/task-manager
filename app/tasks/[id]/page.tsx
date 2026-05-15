@@ -1,24 +1,33 @@
 import { Suspense } from 'react'
-import { getTaskById, getTasksSidebar } from '@/lib/queries'
+import { getTaskById, getTasksSidebar, getActionLogsByTaskId } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import { TaskDetailView } from '@/components/task-detail-view'
 import { TaskDetailSidebar } from '@/components/task-detail-sidebar'
 import { BackButton } from '@/components/back-button'
 import TaskDetailLoading from './loading'
+import { isDevLabel } from '@/lib/types'
+import { TaskActionLog } from '@/components/task-action-log'
 
-// Lascia che Next.js gestisca il caching tramite unstable_cache nei data fetcher.
-// Non serve force-dynamic: le mutation chiamano revalidateTag.
 export const dynamic = 'auto'
 
 async function TaskDetailData({ id }: { id: string }) {
   const task = await getTaskById(id)
   if (!task) notFound()
-  return <TaskDetailView task={task} />
+
+  const logs = isDevLabel(task.label) ? await getActionLogsByTaskId(id) : []
+
+  return (
+    <div className="space-y-6">
+      <TaskDetailView task={task} />
+      {isDevLabel(task.label) && (
+        <TaskActionLog taskId={id} initialLogs={logs} />
+      )}
+    </div>
+  )
 }
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  // Sidebar usa query leggera (solo 6 colonne, in cache)
   const tasks = await getTasksSidebar()
 
   return (
@@ -38,7 +47,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           <TaskDetailSidebar tasks={tasks as any} currentId={id} />
         </aside>
 
-        {/* Main content — il dettaglio parte in Suspense per non bloccare il layout */}
+        {/* Main content */}
         <div className="flex-1 overflow-y-auto">
           <div className="lg:hidden w-full" style={{ height: 'env(safe-area-inset-top, 44px)' }} />
           <div className="mx-auto max-w-4xl px-4 pb-8 lg:py-8">

@@ -75,6 +75,156 @@ export function isBugLabel(label: string | null | undefined): boolean {
   return label?.trim().toLowerCase() === 'bug'
 }
 
+/** Etichette che abilitano la sezione Action Log (tutte le label di sviluppo) */
+export const DEV_LABELS = ['Bug', 'Feature', 'Miglioramento', 'Refactor', 'Documentazione', 'DevOps']
+
+/** Restituisce true se l'etichetta attiva la sezione Action Log */
+export function isDevLabel(label: string | null | undefined): boolean {
+  return DEV_LABELS.some(l => l.toLowerCase() === label?.trim().toLowerCase())
+}
+
+// ---------------------------------------------------------------------------
+// Action Log
+// ---------------------------------------------------------------------------
+
+export type ActionLogActionType =
+  | 'component'
+  | 'manual_procedure'
+  | 'metadata'
+  | 'deploy'
+  | 'config'
+
+export interface ActionLogEntry {
+  id: string
+  task_id: string
+  user_id: string | null
+  action_type: ActionLogActionType
+  technology: string          // es. 'salesforce', 'generic', 'react', ...
+  metadata_type: string       // es. 'LWC', 'Apex Class', 'Flow', 'Component', ...
+  title: string
+  description: string | null
+  component_ref: string | null
+  created_at: string
+}
+
+export type CreateActionLogInput = Omit<ActionLogEntry, 'id' | 'created_at' | 'user_id'>
+
+/** Config per ogni tipo di azione */
+export const ACTION_TYPE_CONFIG: Record<ActionLogActionType, { label: string }> = {
+  component:        { label: 'Componente' },
+  metadata:         { label: 'Metadato' },
+  manual_procedure: { label: 'Procedura manuale' },
+  deploy:           { label: 'Deploy' },
+  config:           { label: 'Configurazione' },
+}
+
+/** Tecnologie supportate con le loro picklist di metadata_type */
+export interface TechnologyConfig {
+  label: string
+  /** Emoji o sigla da mostrare nel badge */
+  badge: string
+  /** Colori Tailwind per badge/header */
+  color: string
+  bgColor: string
+  borderColor: string
+  /** Valori predefiniti della picklist metadata_type */
+  defaultMetadataTypes: string[]
+}
+
+export const TECHNOLOGY_CONFIGS: Record<string, TechnologyConfig> = {
+  salesforce: {
+    label: 'Salesforce',
+    badge: 'SF',
+    color: 'text-sky-700',
+    bgColor: 'bg-sky-50',
+    borderColor: 'border-sky-200',
+    defaultMetadataTypes: [
+      'Apex Class',
+      'Apex Trigger',
+      'LWC',
+      'Aura Component',
+      'Flow',
+      'Process Builder',
+      'Validation Rule',
+      'Custom Object',
+      'Custom Field',
+      'Page Layout',
+      'Permission Set',
+      'Profile',
+      'Record Type',
+      'Custom Label',
+      'Custom Metadata Type',
+      'Custom Setting',
+      'Named Credential',
+      'Remote Site Setting',
+      'Static Resource',
+      'Email Template',
+      'Report',
+      'Dashboard',
+      'Workflow Rule',
+      'Assignment Rule',
+      'Escalation Rule',
+      'Sharing Rule',
+      'Connected App',
+      'Integration',
+    ],
+  },
+  react: {
+    label: 'React / Next.js',
+    badge: 'RX',
+    color: 'text-cyan-700',
+    bgColor: 'bg-cyan-50',
+    borderColor: 'border-cyan-200',
+    defaultMetadataTypes: [
+      'Component',
+      'Page',
+      'Hook',
+      'Context',
+      'API Route',
+      'Server Action',
+      'Middleware',
+      'Utility',
+      'Type / Interface',
+      'Style',
+    ],
+  },
+  database: {
+    label: 'Database',
+    badge: 'DB',
+    color: 'text-emerald-700',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    defaultMetadataTypes: [
+      'Tabella',
+      'View',
+      'Funzione',
+      'Trigger DB',
+      'Indice',
+      'Policy RLS',
+      'Migration',
+      'Seed',
+      'Edge Function',
+    ],
+  },
+  generic: {
+    label: 'Generico',
+    badge: '⚙',
+    color: 'text-slate-700',
+    bgColor: 'bg-slate-50',
+    borderColor: 'border-slate-200',
+    defaultMetadataTypes: [
+      'File',
+      'Script',
+      'Configurazione',
+      'Documentazione',
+      'Test',
+      'CI/CD',
+      'Environment Variable',
+      'Package',
+    ],
+  },
+}
+
 export type ViewMode = 'list' | 'board' | 'grid'
 export type GroupBy = 'none' | 'status' | 'priority' | 'label'
 export type SortBy = 'created_at' | 'due_date' | 'priority' | 'title'

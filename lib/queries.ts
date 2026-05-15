@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { cache } from 'react'
-import type { Task } from './types'
+import type { Task, ActionLogEntry } from './types'
 
 type TaskSummary = Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'label' | 'due_date'>
 
@@ -57,6 +57,20 @@ export const getTasksSidebar = cache(async (): Promise<TaskSummary[]> => {
     .order('created_at', { ascending: false })
   if (error) { console.error('fetchTasksSidebar:', error); return [] }
   return data as TaskSummary[]
+})
+
+export const getActionLogsByTaskId = cache(async (taskId: string): Promise<ActionLogEntry[]> => {
+  const user = await getAuthUser()
+  if (!user) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('task_action_logs')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false })
+  if (error) { console.error('getActionLogsByTaskId:', error); return [] }
+  return data as ActionLogEntry[]
 })
 
 export async function getTaskAnalytics() {
