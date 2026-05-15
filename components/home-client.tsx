@@ -2,18 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { TaskList } from '@/components/task-list'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
 import { MobileNav } from '@/components/mobile-nav'
 import { MobileFab } from '@/components/mobile-fab'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BarChart3, ListTodo, LayoutDashboard } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { BarChart3, ListTodo, LayoutDashboard, Layers } from 'lucide-react'
 import { UserMenuButton } from '@/components/user-menu-button'
 import type { Task } from '@/lib/types'
 import type { UserPreferences } from '@/lib/profile-actions'
 
-// DashboardWidgets dipende da Date.now() e dalla locale del browser — va escluso dal SSR
-// per evitare hydration mismatch causato da valori data diversi tra server e client.
 const DashboardWidgets = dynamic(
   () => import('@/components/dashboard-widgets').then(m => ({ default: m.DashboardWidgets })),
   { ssr: false }
@@ -48,6 +47,7 @@ export function HomeClient({
   greeting, dateLabel,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabValue>('dashboard')
+  const router = useRouter()
 
   useEffect(() => {
     setActiveTab(readTab())
@@ -89,6 +89,14 @@ export function HomeClient({
               </TabsTrigger>
               <TabsTrigger value="analytics" className="gap-2">
                 <BarChart3 className="size-4" />Analytics
+              </TabsTrigger>
+              {/* Componenti: naviga direttamente alla pagina */}
+              <TabsTrigger
+                value="__components__"
+                className="gap-2"
+                onClick={() => router.push('/components')}
+              >
+                <Layers className="size-4" />Componenti
               </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">

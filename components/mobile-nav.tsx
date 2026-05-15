@@ -1,14 +1,15 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { LayoutDashboard, ListTodo, BarChart3, Settings } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, ListTodo, BarChart3, Settings, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
-  { id: 'dashboard', label: 'Home',      icon: LayoutDashboard },
-  { id: 'tasks',     label: 'Task',      icon: ListTodo },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'settings',  label: 'Profilo',   icon: Settings, href: '/settings' },
+  { id: 'dashboard',   label: 'Home',        icon: LayoutDashboard },
+  { id: 'tasks',       label: 'Task',         icon: ListTodo },
+  { id: 'analytics',  label: 'Analytics',    icon: BarChart3 },
+  { id: 'components', label: 'Componenti',   icon: Layers,   href: '/components' },
+  { id: 'settings',   label: 'Profilo',      icon: Settings, href: '/settings' },
 ] as const
 
 interface Props {
@@ -18,12 +19,15 @@ interface Props {
 
 export function MobileNav({ activeTab, onTabChange }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-background/90 backdrop-blur-xl border-t border-border safe-bottom">
       <div className="flex items-center justify-around h-16">
         {TABS.map(({ id, label, icon: Icon, href }) => {
-          const isActive = activeTab === id
+          const isActive = href
+            ? pathname.startsWith(href)
+            : activeTab === id
           return (
             <button
               key={id}
